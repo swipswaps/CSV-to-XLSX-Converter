@@ -37,10 +37,16 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadDefaultTemplate = async () => {
       try {
+        // Get the base path from the current location
+        // In production (GitHub Pages): /CSV-to-XLSX-Converter/
+        // In development: /
+        const basePath = import.meta.env.BASE_URL || '/';
+        const templateUrl = `${basePath}Marketplace_Bulk_Upload_Template.xlsx`;
+
         // Fetch the default template from public directory
-        const response = await fetch('/Marketplace_Bulk_Upload_Template.xlsx');
+        const response = await fetch(templateUrl);
         if (!response.ok) {
-          console.warn('Default template not found');
+          console.warn('Default template not found at:', templateUrl);
           return;
         }
 
