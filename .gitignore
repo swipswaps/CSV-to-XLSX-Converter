@@ -22,3 +22,17 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Test files
+test-*.html
+inspect-*.js
+inspect_*.py
+
+# Old/backup files
+*.old.*
+App.old.tsx
+
+# Environment files
+.env
+.env.local
+.env.*.local
