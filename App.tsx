@@ -33,6 +33,32 @@ const App: React.FC = () => {
     reset: resetHistory
   } = useUndoRedo<MappedDataRow[]>([]);
 
+  // Load default template on mount
+  useEffect(() => {
+    const loadDefaultTemplate = async () => {
+      try {
+        // Fetch the default template from public directory
+        const response = await fetch('/Marketplace_Bulk_Upload_Template.xlsx');
+        if (!response.ok) {
+          console.warn('Default template not found');
+          return;
+        }
+
+        const blob = await response.blob();
+        const file = new File([blob], 'Marketplace_Bulk_Upload_Template.xlsx', {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+
+        // Process the template automatically
+        await handleTemplateFileSelect(file);
+      } catch (err) {
+        console.error('Failed to load default template:', err);
+      }
+    };
+
+    loadDefaultTemplate();
+  }, []); // Empty dependency array - only run on mount
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -42,7 +68,7 @@ const App: React.FC = () => {
         undo();
       }
       // Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y for redo
-      if (((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') || 
+      if (((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') ||
           ((e.ctrlKey || e.metaKey) && e.key === 'y')) {
         if (appState === 'preview') {
           e.preventDefault();
