@@ -1,0 +1,5 @@
+{
+  "name": "CSV to XLSX Converter for Marketplace",
+  "description": "A powerful and easy-to-use tool to convert and map CSV data into a structured XLSX file using your own template. Perfect for formatting product data for platforms like Facebook Marketplace.",
+  "requestFramePermissions": []
+}
