@@ -256,11 +256,22 @@ const App: React.FC = () => {
                     onDragStateChange={setIsDraggingTemplate}
                   />
                 ) : (
-                  <FileDisplay
-                    file={templateFile}
-                    onRemove={removeTemplateFile}
-                    icon={<FileXlsxIcon className="h-10 w-10 text-green-600 flex-shrink-0" />}
-                  />
+                  <div>
+                    <FileDisplay
+                      file={templateFile}
+                      onRemove={removeTemplateFile}
+                      icon={<FileXlsxIcon className="h-10 w-10 text-green-600 flex-shrink-0" />}
+                    />
+                    <div className="mt-3">
+                      <button
+                        onClick={removeTemplateFile}
+                        className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 font-semibold py-2 px-4 rounded-lg flex items-center justify-center transition-colors"
+                      >
+                        <RefreshCwIcon className="mr-2 h-4 w-4" />
+                        Upload Different Template
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
 
