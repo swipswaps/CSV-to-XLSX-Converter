@@ -177,8 +177,95 @@ export const exportToXLSX = (
   const worksheet = XLSX.utils.json_to_sheet(mappedData, { header: templateHeaders });
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Mapped Data');
-  
+
   const outputFilename = originalFileName.replace(/\.csv$/i, '_mapped.xlsx');
   XLSX.writeFile(workbook, outputFilename);
+};
+
+/**
+ * Generate CSV template with headers and sample data
+ */
+export const generateCSVTemplate = (headers: string[], includeExamples: boolean = true): string => {
+  // Escape CSV field if it contains comma, quote, or newline
+  const escapeCSVField = (field: string): string => {
+    if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+      return `"${field.replace(/"/g, '""')}"`;
+    }
+    return field;
+  };
+
+  // Create header row
+  const headerRow = headers.map(escapeCSVField).join(',');
+
+  if (!includeExamples) {
+    return headerRow;
+  }
+
+  // Create sample data rows based on common header names
+  const generateSampleValue = (header: string): string => {
+    const headerLower = header.toLowerCase();
+
+    if (headerLower.includes('title') || headerLower.includes('name')) {
+      return 'Sample Product Name';
+    } else if (headerLower.includes('price')) {
+      return '99.99';
+    } else if (headerLower.includes('condition')) {
+      return 'New';
+    } else if (headerLower.includes('description')) {
+      return 'This is a sample description for your product';
+    } else if (headerLower.includes('category')) {
+      return 'Electronics';
+    } else if (headerLower.includes('quantity') || headerLower.includes('qty')) {
+      return '10';
+    } else if (headerLower.includes('sku') || headerLower.includes('id')) {
+      return 'SKU-12345';
+    } else if (headerLower.includes('brand')) {
+      return 'Sample Brand';
+    } else if (headerLower.includes('color')) {
+      return 'Blue';
+    } else if (headerLower.includes('size')) {
+      return 'Medium';
+    } else if (headerLower.includes('weight')) {
+      return '1.5';
+    } else if (headerLower.includes('url') || headerLower.includes('link')) {
+      return 'https://example.com';
+    } else if (headerLower.includes('image') || headerLower.includes('photo')) {
+      return 'https://example.com/image.jpg';
+    } else {
+      return 'Sample Value';
+    }
+  };
+
+  // Generate 3 sample rows
+  const sampleRows = Array.from({ length: 3 }, (_, i) => {
+    return headers.map(header => {
+      const baseValue = generateSampleValue(header);
+      // Add variation to sample data
+      if (i > 0 && (header.toLowerCase().includes('title') || header.toLowerCase().includes('name'))) {
+        return escapeCSVField(`${baseValue} ${i + 1}`);
+      }
+      return escapeCSVField(baseValue);
+    }).join(',');
+  });
+
+  return [headerRow, ...sampleRows].join('\n');
+};
+
+/**
+ * Download CSV template as file
+ */
+export const downloadCSVTemplate = (headers: string[], filename: string = 'template.csv', includeExamples: boolean = true): void => {
+  const csvContent = generateCSVTemplate(headers, includeExamples);
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 

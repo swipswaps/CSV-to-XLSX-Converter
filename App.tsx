@@ -4,10 +4,10 @@ import { FileUploadZone } from './components/FileUploadZone';
 import { FileDisplay } from './components/FileDisplay';
 import { DataTable } from './components/DataTable';
 import { validateTemplateFile, validateDataFile } from './utils/fileUtils';
-import { processTemplate, processCSVData, exportToXLSX, MappedDataRow } from './utils/xlsxUtils';
+import { processTemplate, processCSVData, exportToXLSX, downloadCSVTemplate, generateCSVTemplate, MappedDataRow } from './utils/xlsxUtils';
 import { useUndoRedo } from './hooks/useUndoRedo';
 
-type AppState = 'upload' | 'preview';
+type AppState = 'upload' | 'template-preview' | 'preview';
 
 const App: React.FC = () => {
   const [templateFile, setTemplateFile] = useState<File | null>(null);
@@ -68,13 +68,13 @@ const App: React.FC = () => {
   const handleTemplateFileSelect = useCallback(async (file: File) => {
     setError(null);
     setFileWarning(null);
-    
+
     const validation = validateTemplateFile(file);
     if (!validation.valid) {
       setError(validation.error || 'Invalid file');
       return;
     }
-    
+
     if (validation.warning) {
       setFileWarning(validation.warning);
     }
@@ -83,6 +83,8 @@ const App: React.FC = () => {
       const { headers } = await processTemplate(file);
       setTemplateHeaders(headers);
       setTemplateFile(file);
+      // Automatically show template preview after successful upload
+      setAppState('template-preview');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setError(`Failed to process template: ${errorMessage}`);
@@ -155,6 +157,20 @@ const App: React.FC = () => {
     if (!dataFile || !mappedData) return;
     exportToXLSX(mappedData, templateHeaders, dataFile.name);
   }, [dataFile, mappedData, templateHeaders]);
+
+  const handleDownloadCSVTemplate = useCallback((includeExamples: boolean) => {
+    if (templateHeaders.length === 0) return;
+    const filename = templateFile ? templateFile.name.replace(/\.xlsx$/i, '_template.csv') : 'csv_template.csv';
+    downloadCSVTemplate(templateHeaders, filename, includeExamples);
+  }, [templateHeaders, templateFile]);
+
+  const handleBackToUpload = useCallback(() => {
+    setAppState('upload');
+  }, []);
+
+  const handleContinueToDataUpload = useCallback(() => {
+    setAppState('upload');
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col items-center justify-center p-4 font-sans">
@@ -300,6 +316,128 @@ const App: React.FC = () => {
                   <li>Review and edit the mapped data directly in the preview table.</li>
                   <li>Download your perfectly formatted XLSX file. All processing happens in your browser.</li>
                 </ol>
+              </div>
+            </div>
+          )}
+
+          {appState === 'template-preview' && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">
+                  ✅ Template Loaded Successfully
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400">
+                  Your XLSX template has been processed. Here's the expected CSV format:
+                </p>
+              </div>
+
+              {/* Template Info */}
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+                <div className="flex items-start">
+                  <FileXlsxIcon className="h-8 w-8 text-green-600 dark:text-green-400 mr-3 flex-shrink-0 mt-1" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-green-900 dark:text-green-100 mb-1">
+                      {templateFile?.name}
+                    </h3>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      <strong>{templateHeaders.length}</strong> columns detected
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Expected CSV Format */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3">
+                  Expected CSV Format
+                </h3>
+
+                {/* Headers Display */}
+                <div className="bg-slate-100 dark:bg-slate-700/50 rounded-lg p-4 mb-4">
+                  <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    Required Column Headers:
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {templateHeaders.map((header, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200"
+                      >
+                        {header}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* CSV Preview */}
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      CSV Template Preview (with sample data):
+                    </h4>
+                  </div>
+                  <pre className="text-xs bg-white dark:bg-slate-900 p-3 rounded border border-slate-200 dark:border-slate-700 overflow-x-auto">
+                    <code className="text-slate-800 dark:text-slate-200">
+                      {generateCSVTemplate(templateHeaders, true)}
+                    </code>
+                  </pre>
+                </div>
+              </div>
+
+              {/* Download Options */}
+              <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">
+                  📥 Download CSV Template
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                  Download a CSV template to fill in your data. You can edit it in Excel, Google Sheets, or any text editor.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => handleDownloadCSVTemplate(true)}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center transition-colors"
+                  >
+                    <DownloadIcon className="mr-2 h-4 w-4" />
+                    Download with Sample Data
+                  </button>
+                  <button
+                    onClick={() => handleDownloadCSVTemplate(false)}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center transition-colors"
+                  >
+                    <DownloadIcon className="mr-2 h-4 w-4" />
+                    Download Headers Only
+                  </button>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+                  💡 Next Steps:
+                </h3>
+                <ol className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1 list-decimal list-inside">
+                  <li>Download the CSV template above (with or without sample data)</li>
+                  <li>Fill in your product data in the CSV file</li>
+                  <li>Make sure your CSV has the exact same column headers</li>
+                  <li>Upload your completed CSV file below to convert to XLSX</li>
+                </ol>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={handleBackToUpload}
+                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 font-bold py-3 px-6 rounded-lg flex items-center justify-center transition-colors"
+                >
+                  <RefreshCwIcon className="mr-2 h-5 w-5" />
+                  Change Template
+                </button>
+                <button
+                  onClick={handleContinueToDataUpload}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center transition-colors transform hover:scale-105"
+                >
+                  Continue to Upload CSV Data →
+                </button>
               </div>
             </div>
           )}

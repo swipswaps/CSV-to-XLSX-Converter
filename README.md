@@ -9,6 +9,7 @@ A high-performance, browser-based CSV to XLSX converter with template mapping, r
 ### Core Functionality
 - 📊 **Template-Based Mapping**: Upload an XLSX template to define output structure
 - 🔄 **Intelligent Header Detection**: Automatically detects header rows in templates
+- 📥 **CSV Template Generator**: Download CSV templates with sample data from XLSX templates
 - ✏️ **Real-Time Editing**: Edit mapped data directly in the preview table
 - 💾 **Browser-Based Processing**: All processing happens locally - no server uploads
 - 🎨 **Dark Mode Support**: Beautiful UI with automatic dark mode
@@ -56,24 +57,52 @@ A high-performance, browser-based CSV to XLSX converter with template mapping, r
 
 ## 📖 How to Use
 
+### Workflow 1: Convert Existing CSV to XLSX
+
 1. **Upload XLSX Template**
    - Click or drag-and-drop your `.xlsx` template file
    - The app will auto-detect the header row (must contain TITLE, PRICE, and CONDITION)
+   - You'll see a preview of the expected CSV format
 
-2. **Upload CSV Data**
+2. **Download CSV Template (Optional)**
+   - Download a CSV template with the exact headers from your XLSX
+   - Choose "With Sample Data" to see examples, or "Headers Only" for a blank template
+
+3. **Upload CSV Data**
+   - Click "Continue to Upload CSV Data" or go back to upload screen
    - Click or drag-and-drop your `.csv` data file
    - Headers will be automatically mapped to template structure
 
-3. **Configure Options**
+4. **Configure Options**
    - Enable/disable automatic character cleaning for encoding issues
 
-4. **Preview & Edit**
+5. **Preview & Edit**
    - Review the mapped data in the virtualized table
    - Click any cell to edit
    - Use Ctrl+Z to undo and Ctrl+Shift+Z to redo changes
 
-5. **Download**
+6. **Download**
    - Click "Download XLSX" to save your formatted file
+
+### Workflow 2: Create CSV from XLSX Template
+
+1. **Upload XLSX Template**
+   - Upload your marketplace's XLSX template file
+   - View the detected column headers
+
+2. **Download CSV Template**
+   - Click "Download with Sample Data" to get a CSV with example values
+   - Or click "Download Headers Only" for a blank CSV template
+
+3. **Fill in Your Data**
+   - Open the downloaded CSV in Excel, Google Sheets, or any text editor
+   - Fill in your product data following the sample format
+   - Save the file
+
+4. **Upload and Convert**
+   - Upload your completed CSV file
+   - Preview and edit if needed
+   - Download the final XLSX file
 
 ## ⌨️ Keyboard Shortcuts
 
