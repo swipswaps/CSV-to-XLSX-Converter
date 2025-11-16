@@ -13,12 +13,14 @@
 - **Improved:** Better organization - template editing in template-preview, data editing in preview mode
 
 #### Row Management
-- **Added:** "Add Row" button - Insert new empty rows to the data table
-- **Added:** "Delete Last Row" button - Remove the last row from the table
+- **Added:** "Add Row" button - Insert new empty rows to template or mapped data
+- **Added:** "Delete Last Row" button - Remove the last row from template or mapped data
 - **Added:** Row counter display showing total number of rows
 - **Added:** Toast notifications for row operations
 - **Added:** PlusIcon and TrashIcon to icon library
-- **Added:** Undo/Redo buttons in XLSX tab header
+- **Added:** Undo/Redo buttons in XLSX tab header (preview mode)
+- **Added:** Row management in template-preview mode (no CSV upload required)
+- **Added:** Row management in preview mode (after CSV upload)
 
 #### Title & Branding Update
 - **Changed:** App title from "CSV to XLSX Converter" to "Marketplace Data Editor"
@@ -42,23 +44,33 @@
 ### 🔧 Technical Improvements
 
 - **Added:** Tabbed interface for preview mode with conditional rendering
-- **Added:** `handleAddRow` - Creates empty row with all template headers
-- **Added:** `handleDeleteLastRow` - Removes last row from data
+- **Added:** `handleAddRow` - Creates empty row with all mapped data headers
+- **Added:** `handleDeleteLastRow` - Removes last row from mapped data
+- **Added:** `handleAddTemplateRow` - Creates empty row in template data
+- **Added:** `handleDeleteTemplateLastRow` - Removes last row from template data
+- **Added:** `handleTemplateDataChange` - Syncs XLSXEditor changes back to templateData
+- **Added:** `onDataChange` prop to XLSXEditor for bi-directional data flow
+- **Added:** `useEffect` in XLSXEditor to respond to initialData prop changes
 - **Added:** Auto-switch to XLSX tab when entering preview mode
 - **Added:** Row count display with responsive layout
 - **Changed:** Better button organization with flex layout
 - **Changed:** Separated template-preview tabs from preview tabs
 - **Changed:** XLSX tab shows mapped data table in preview mode, template editor in template-preview mode
+- **Changed:** Row management available in both template-preview and preview modes
+- **Fixed:** XLSXEditor now updates when rows are added/removed externally
 
 ### 📊 Impact
 
-- ✅ Users can now add/remove rows without re-uploading data
+- ✅ Users can now add/remove rows in XLSX tab (template or mapped data)
+- ✅ No CSV upload required to manage template rows
+- ✅ XLSXEditor properly updates when rows are added/removed
+- ✅ Bi-directional data flow between XLSXEditor and parent component
 - ✅ Data editing now integrated into tabbed interface (XLSX tab)
 - ✅ Better organization - clear separation between template and data editing
 - ✅ More accurate app branding and SEO
 - ✅ Better discoverability with comprehensive title
 - ✅ Zero features removed
-- ✅ Bundle size: 598.61 kB (+4.15 kB from v2.2.0)
+- ✅ Bundle size: 600.53 kB (+7.07 kB from v2.2.0)
 
 ---
 

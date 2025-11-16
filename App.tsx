@@ -253,6 +253,39 @@ const App: React.FC = () => {
     });
   }, [mappedData, setMappedData]);
 
+  // Add new empty row to template data
+  const handleAddTemplateRow = useCallback(() => {
+    if (templateData.length === 0 || templateHeaders.length === 0) return;
+
+    // Create empty row with same length as headers
+    const newRow = new Array(templateHeaders.length).fill('');
+    const updatedData = [...templateData, newRow];
+    setTemplateData(updatedData);
+
+    toast.success('New row added to template!', {
+      icon: '➕',
+      duration: 2000,
+    });
+  }, [templateData, templateHeaders]);
+
+  // Delete last row from template data
+  const handleDeleteTemplateLastRow = useCallback(() => {
+    if (templateData.length === 0) return;
+
+    const updatedData = templateData.slice(0, -1);
+    setTemplateData(updatedData);
+
+    toast.success('Last row deleted from template!', {
+      icon: '🗑️',
+      duration: 2000,
+    });
+  }, [templateData]);
+
+  // Handle data changes from XLSXEditor
+  const handleTemplateDataChange = useCallback((newData: any[][]) => {
+    setTemplateData(newData);
+  }, []);
+
   // Handle Facebook post edits - update template data
   const handleFacebookSaveToTemplateData = useCallback((rowIndex: number, updatedRow: any[]) => {
     const newTemplateData = [...templateData];
@@ -694,11 +727,53 @@ const App: React.FC = () => {
                   )}
 
                   {activeEditorTab === 'xlsx' && templateData.length > 0 && (
-                    <XLSXEditor
-                      headers={templateHeaders}
-                      initialData={templateData}
-                      filename={templateFile?.name.replace(/\.xlsx$/i, '_edited.xlsx') || 'edited_template.xlsx'}
-                    />
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                            📊 Edit Template Data
+                          </h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                            <strong>{templateData.length - 1}</strong> data rows (excluding header).
+                            Add or remove rows as needed.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Row Management Buttons */}
+                      <div className="mb-4 flex flex-wrap gap-3">
+                        <button
+                          onClick={handleAddTemplateRow}
+                          disabled={templateHeaders.length === 0}
+                          className={`${getButtonClasses({ variant: 'success', size: 'md', disabled: templateHeaders.length === 0 })} flex items-center gap-2`}
+                          title="Add a new empty row to the template"
+                        >
+                          <PlusIcon className="h-4 w-4" />
+                          <span>Add Row</span>
+                        </button>
+                        <button
+                          onClick={handleDeleteTemplateLastRow}
+                          disabled={templateData.length <= 1}
+                          className={`${getButtonClasses({ variant: 'danger', size: 'md', disabled: templateData.length <= 1 })} flex items-center gap-2`}
+                          title="Delete the last row from the template (cannot delete header)"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                          <span>Delete Last Row</span>
+                        </button>
+                        <div className="flex-1"></div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400 flex items-center">
+                          <span className="font-medium">{Math.max(0, templateData.length - 1)}</span>
+                          <span className="ml-1">data row{(templateData.length - 1) !== 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+
+                      <XLSXEditor
+                        headers={templateHeaders}
+                        initialData={templateData}
+                        filename={templateFile?.name.replace(/\.xlsx$/i, '_edited.xlsx') || 'edited_template.xlsx'}
+                        onDataChange={handleTemplateDataChange}
+                      />
+                    </div>
                   )}
 
                   {activeEditorTab === 'csv' && (
