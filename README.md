@@ -1,6 +1,6 @@
-# CSV to XLSX Converter
+# Marketplace Data Editor
 
-A high-performance, browser-based CSV to XLSX converter with template mapping, multi-format editing, and advanced features. Convert, edit, and export your data in **XLSX, CSV, JSON, and SQL** formats - all in your browser with zero server uploads!
+A high-performance, browser-based data editor with template mapping, multi-format editing, Facebook preview, and advanced features. Map, edit, preview, and export your marketplace data in **XLSX, CSV, JSON, SQL, and Facebook** formats - all in your browser with zero server uploads!
 
 🌐 **Live Demo:** [https://swipswaps.github.io/CSV-to-XLSX-Converter/](https://swipswaps.github.io/CSV-to-XLSX-Converter/)
 
@@ -20,6 +20,11 @@ A high-performance, browser-based CSV to XLSX converter with template mapping, m
 - 📝 **CSV Editor**: Editable textarea with proper comma/quote escaping (RFC 4180)
 - 🟣 **JSON Editor**: Pretty-printed JSON array with syntax highlighting
 - 🟠 **SQL Editor**: Auto-generated CREATE TABLE + INSERT statements
+- 📘 **Facebook Preview**: Preview and edit data as Facebook posts with official styling
+  - **Save Across All Tabs**: Edits sync back to all other editors
+  - **Revert to Previous**: Undo changes before saving
+  - **Row Selector**: Scroll through or jump to any row
+  - **Character Counter**: Real-time validation (63,206 limit)
 
 ### Performance Optimizations
 - ⚡ **Virtual Scrolling**: Smoothly handle datasets with 10,000+ rows

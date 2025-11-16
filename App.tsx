@@ -301,10 +301,10 @@ const App: React.FC = () => {
       <div className="w-full max-w-5xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white">
-            CSV to XLSX Converter
+            Marketplace Data Editor
           </h1>
           <p className="mt-2 text-lg text-slate-600 dark:text-slate-400">
-            Map, preview, and edit your data before exporting.
+            Map, preview, edit, and export your data in multiple formats (XLSX, CSV, JSON, SQL, Facebook).
           </p>
         </header>
 
