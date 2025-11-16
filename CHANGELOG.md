@@ -1,8 +1,16 @@
 # Changelog
 
-## [2.3.0] - 2025-11-16 - Row Management & Title Update
+## [2.3.0] - 2025-11-16 - Row Management, Title Update & Tabbed Data Editing
 
 ### 🎯 Major Features
+
+#### Tabbed Data Editing Interface
+- **Added:** Tabbed interface for preview mode (XLSX, CSV, JSON, SQL, Facebook tabs)
+- **Changed:** "Preview & Edit Data" section now integrated into XLSX tab
+- **Changed:** Data table with row management now appears in XLSX tab
+- **Changed:** Auto-switch to XLSX tab when entering preview mode
+- **Added:** Separate tab content for mapped data vs template data
+- **Improved:** Better organization - template editing in template-preview, data editing in preview mode
 
 #### Row Management
 - **Added:** "Add Row" button - Insert new empty rows to the data table
@@ -10,6 +18,7 @@
 - **Added:** Row counter display showing total number of rows
 - **Added:** Toast notifications for row operations
 - **Added:** PlusIcon and TrashIcon to icon library
+- **Added:** Undo/Redo buttons in XLSX tab header
 
 #### Title & Branding Update
 - **Changed:** App title from "CSV to XLSX Converter" to "Marketplace Data Editor"
@@ -21,26 +30,35 @@
 
 ### 🎨 UI/UX Enhancements
 
-- **Added:** Row management toolbar above data table
+- **Added:** Tabbed navigation in preview mode for better organization
+- **Added:** Row management toolbar above data table in XLSX tab
 - **Added:** Visual row counter with proper pluralization
 - **Added:** Success/danger button variants for add/delete actions
 - **Added:** Disabled states when no data available
 - **Added:** Tooltips explaining button actions
+- **Added:** Undo/Redo buttons prominently displayed in XLSX tab
+- **Improved:** Cleaner separation between template editing and data editing
 
 ### 🔧 Technical Improvements
 
+- **Added:** Tabbed interface for preview mode with conditional rendering
 - **Added:** `handleAddRow` - Creates empty row with all template headers
 - **Added:** `handleDeleteLastRow` - Removes last row from data
+- **Added:** Auto-switch to XLSX tab when entering preview mode
 - **Added:** Row count display with responsive layout
 - **Changed:** Better button organization with flex layout
+- **Changed:** Separated template-preview tabs from preview tabs
+- **Changed:** XLSX tab shows mapped data table in preview mode, template editor in template-preview mode
 
 ### 📊 Impact
 
 - ✅ Users can now add/remove rows without re-uploading data
+- ✅ Data editing now integrated into tabbed interface (XLSX tab)
+- ✅ Better organization - clear separation between template and data editing
 - ✅ More accurate app branding and SEO
 - ✅ Better discoverability with comprehensive title
 - ✅ Zero features removed
-- ✅ Bundle size: 594.46 kB (+1.94 kB from v2.2.0)
+- ✅ Bundle size: 598.61 kB (+4.15 kB from v2.2.0)
 
 ---
 

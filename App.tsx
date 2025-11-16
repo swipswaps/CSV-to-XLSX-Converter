@@ -203,6 +203,8 @@ const App: React.FC = () => {
       // Reset history with the new data (this also sets the current state)
       resetHistory(mapped);
       setAppState('preview');
+      // Switch to XLSX tab when entering preview mode
+      setActiveEditorTab('xlsx');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during conversion.';
       setError(`Conversion failed: ${errorMessage}`);
@@ -813,91 +815,229 @@ const App: React.FC = () => {
               )}
 
               {appState === 'preview' && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
-                  Preview & Edit Data
-                </h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={undo}
-                    disabled={!canUndo}
-                    className="px-3 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Undo (Ctrl+Z)"
-                  >
-                    <UndoIcon className="h-4 w-4" />
-                    <span className="text-sm hidden sm:inline">Undo</span>
-                  </button>
-                  <button
-                    onClick={redo}
-                    disabled={!canRedo}
-                    className="px-3 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Redo (Ctrl+Shift+Z)"
-                  >
-                    <RedoIcon className="h-4 w-4" />
-                    <span className="text-sm hidden sm:inline">Redo</span>
-                  </button>
-                </div>
-              </div>
+                <div>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">
+                      📊 Preview & Edit Data
+                    </h2>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      Your CSV data has been mapped to the template. Edit your data in the tabs below.
+                    </p>
+                  </div>
 
-              <div className="mb-4 text-sm text-slate-600 dark:text-slate-400">
-                <p>
-                  <strong>{mappedData?.length || 0}</strong> rows loaded.
-                  Use <kbd className="px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded text-xs">Ctrl+Z</kbd> to undo and
-                  <kbd className="px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded text-xs ml-1">Ctrl+Shift+Z</kbd> to redo changes.
-                </p>
-              </div>
+                  {/* Tabbed Editor Interface */}
+                  <div className="mb-6">
+                    {/* Tab Navigation */}
+                    <div className="border-b border-slate-200 dark:border-slate-700 mb-4">
+                      <nav className="flex flex-wrap space-x-1" aria-label="Editor tabs">
+                        <button
+                          onClick={() => setActiveEditorTab('xlsx')}
+                          className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
+                            activeEditorTab === 'xlsx'
+                              ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                          }`}
+                        >
+                          📊 XLSX Editor
+                        </button>
+                        <button
+                          onClick={() => setActiveEditorTab('csv')}
+                          className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
+                            activeEditorTab === 'csv'
+                              ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                          }`}
+                        >
+                          📄 CSV Editor
+                        </button>
+                        <button
+                          onClick={() => setActiveEditorTab('json')}
+                          className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
+                            activeEditorTab === 'json'
+                              ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                          }`}
+                        >
+                          🔧 JSON Editor
+                        </button>
+                        <button
+                          onClick={() => setActiveEditorTab('sql')}
+                          className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
+                            activeEditorTab === 'sql'
+                              ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                          }`}
+                        >
+                          🗄️ SQL Editor
+                        </button>
+                        <button
+                          onClick={() => setActiveEditorTab('facebook')}
+                          className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
+                            activeEditorTab === 'facebook'
+                              ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                          }`}
+                        >
+                          📘 Facebook Preview
+                        </button>
+                      </nav>
+                    </div>
 
-              {/* Row Management Buttons */}
-              <div className="mb-4 flex flex-wrap gap-3">
-                <button
-                  onClick={handleAddRow}
-                  disabled={!mappedData || templateHeaders.length === 0}
-                  className={`${getButtonClasses({ variant: 'success', size: 'md', disabled: !mappedData || templateHeaders.length === 0 })} flex items-center gap-2`}
-                  title="Add a new empty row to the end of the table"
-                >
-                  <PlusIcon className="h-4 w-4" />
-                  <span>Add Row</span>
-                </button>
-                <button
-                  onClick={handleDeleteLastRow}
-                  disabled={!mappedData || mappedData.length === 0}
-                  className={`${getButtonClasses({ variant: 'danger', size: 'md', disabled: !mappedData || mappedData.length === 0 })} flex items-center gap-2`}
-                  title="Delete the last row from the table"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                  <span>Delete Last Row</span>
-                </button>
-                <div className="flex-1"></div>
-                <div className="text-sm text-slate-600 dark:text-slate-400 flex items-center">
-                  <span className="font-medium">{mappedData?.length || 0}</span>
-                  <span className="ml-1">row{(mappedData?.length || 0) !== 1 ? 's' : ''}</span>
-                </div>
-              </div>
+                    {/* Tab Content */}
+                    <div className="min-h-[400px]">
+                      {activeEditorTab === 'xlsx' && (
+                        <div>
+                          {/* Show mapped data table if in preview mode, otherwise show template editor */}
+                          {appState === 'preview' && mappedData && mappedData.length > 0 ? (
+                            <div>
+                              <div className="flex items-center justify-between mb-4">
+                                <div>
+                                  <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                                    📊 Edit Mapped Data
+                                  </h3>
+                                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                                    <strong>{mappedData?.length || 0}</strong> rows loaded.
+                                    Use <kbd className="px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded text-xs">Ctrl+Z</kbd> to undo and
+                                    <kbd className="px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded text-xs ml-1">Ctrl+Shift+Z</kbd> to redo changes.
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={undo}
+                                    disabled={!canUndo}
+                                    className="px-3 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Undo (Ctrl+Z)"
+                                  >
+                                    <UndoIcon className="h-4 w-4" />
+                                    <span className="text-sm hidden sm:inline">Undo</span>
+                                  </button>
+                                  <button
+                                    onClick={redo}
+                                    disabled={!canRedo}
+                                    className="px-3 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Redo (Ctrl+Shift+Z)"
+                                  >
+                                    <RedoIcon className="h-4 w-4" />
+                                    <span className="text-sm hidden sm:inline">Redo</span>
+                                  </button>
+                                </div>
+                              </div>
 
-              <DataTable
-                headers={templateHeaders}
-                data={mappedData || []}
-                onCellChange={handleCellChange}
-              />
+                              {/* Row Management Buttons */}
+                              <div className="mb-4 flex flex-wrap gap-3">
+                                <button
+                                  onClick={handleAddRow}
+                                  disabled={!mappedData || templateHeaders.length === 0}
+                                  className={`${getButtonClasses({ variant: 'success', size: 'md', disabled: !mappedData || templateHeaders.length === 0 })} flex items-center gap-2`}
+                                  title="Add a new empty row to the end of the table"
+                                >
+                                  <PlusIcon className="h-4 w-4" />
+                                  <span>Add Row</span>
+                                </button>
+                                <button
+                                  onClick={handleDeleteLastRow}
+                                  disabled={!mappedData || mappedData.length === 0}
+                                  className={`${getButtonClasses({ variant: 'danger', size: 'md', disabled: !mappedData || mappedData.length === 0 })} flex items-center gap-2`}
+                                  title="Delete the last row from the table"
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                  <span>Delete Last Row</span>
+                                </button>
+                                <div className="flex-1"></div>
+                                <div className="text-sm text-slate-600 dark:text-slate-400 flex items-center">
+                                  <span className="font-medium">{mappedData?.length || 0}</span>
+                                  <span className="ml-1">row{(mappedData?.length || 0) !== 1 ? 's' : ''}</span>
+                                </div>
+                              </div>
 
-              <div className="mt-6 flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={startOver}
-                  className={`w-full sm:w-auto ${getButtonClasses({ variant: 'secondary', size: 'lg' })}`}
-                >
-                  <RefreshCwIcon className="mr-2 h-5 w-5" /> Start Over
-                </button>
-                <button
-                  onClick={downloadXLSX}
-                  disabled={!mappedData || mappedData.length === 0}
-                  className={`w-full sm:w-auto ${getButtonClasses({ variant: 'primary', size: 'lg', disabled: !mappedData || mappedData.length === 0 })}`}
-                >
-                  <DownloadIcon className="mr-2 h-5 w-5" /> Download XLSX
-                </button>
-              </div>
+                              <DataTable
+                                headers={templateHeaders}
+                                data={mappedData || []}
+                                onCellChange={handleCellChange}
+                              />
+
+                              <div className="mt-6 flex flex-col sm:flex-row gap-4">
+                                <button
+                                  onClick={startOver}
+                                  className={`w-full sm:w-auto ${getButtonClasses({ variant: 'secondary', size: 'lg' })}`}
+                                >
+                                  <RefreshCwIcon className="mr-2 h-5 w-5" /> Start Over
+                                </button>
+                                <button
+                                  onClick={downloadXLSX}
+                                  disabled={!mappedData || mappedData.length === 0}
+                                  className={`w-full sm:w-auto ${getButtonClasses({ variant: 'primary', size: 'lg', disabled: !mappedData || mappedData.length === 0 })}`}
+                                >
+                                  <DownloadIcon className="mr-2 h-5 w-5" /> Download XLSX
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                              <p>No data available. Please upload a CSV file.</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {activeEditorTab === 'csv' && mappedData && mappedData.length > 0 && (
+                        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                                Edit CSV Data
+                              </h3>
+                              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                                📊 {mappedData.length} rows × {templateHeaders.length} columns
+                              </p>
+                            </div>
+                            <button
+                              onClick={downloadXLSX}
+                              className={getButtonClasses({ variant: 'success', size: 'md' })}
+                            >
+                              <DownloadIcon className="h-4 w-4 mr-2" />
+                              Download CSV
+                            </button>
+                          </div>
+                          <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                            💡 CSV view of your mapped data. Switch to XLSX tab to edit individual cells.
+                          </div>
+                        </div>
+                      )}
+
+                      {activeEditorTab === 'json' && mappedData && mappedData.length > 0 && (
+                        <JSONEditor
+                          headers={templateHeaders}
+                          data={[templateHeaders, ...mappedData.map(row => templateHeaders.map(h => row[h] || ''))]}
+                          filename="mapped_data.json"
+                          headerRowIndex={0}
+                        />
+                      )}
+
+                      {activeEditorTab === 'sql' && mappedData && mappedData.length > 0 && (
+                        <SQLEditor
+                          headers={templateHeaders}
+                          data={[templateHeaders, ...mappedData.map(row => templateHeaders.map(h => row[h] || ''))]}
+                          filename="mapped_data.sql"
+                          tableName="products"
+                          headerRowIndex={0}
+                        />
+                      )}
+
+                      {activeEditorTab === 'facebook' && mappedData && mappedData.length > 0 && (
+                        <FacebookPreview
+                          templateData={templateData}
+                          headerRowIndex={headerRowIndex}
+                          mappedData={mappedData}
+                          onSaveToTemplateData={handleFacebookSaveToTemplateData}
+                          onSaveToMappedData={handleFacebookSaveToMappedData}
+                        />
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
+
             </>
           )}
         </main>

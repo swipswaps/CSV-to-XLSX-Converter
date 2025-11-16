@@ -2,47 +2,69 @@
 
 ## 📋 Summary
 
-Added **row management functionality** allowing users to add new empty rows and delete the last row from the data table. This addresses the user's request: "I see no way to add item rows to the list."
+Added **row management functionality** and **tabbed data editing interface** allowing users to add new empty rows and delete the last row from the data table. The data editing interface is now integrated into the XLSX tab for better organization. This addresses the user's requests: "I see no way to add item rows to the list" and "Preview & Edit Data should be in the tab editors, at least the .xlsx"
 
 ---
 
 ## 🎯 New Features
 
-### **1. Add Row Button** ➕
-- **Green button** with plus icon
+### **1. Tabbed Data Editing Interface** 📑
+- **Tabbed navigation** in preview mode (XLSX, CSV, JSON, SQL, Facebook)
+- **XLSX tab** now contains the data editing table with row management
+- **Auto-switch** to XLSX tab when entering preview mode
+- **Separate views** for template editing (template-preview) vs data editing (preview)
+- **Better organization** - clear separation of concerns
+
+### **2. Add Row Button** ➕
+- **Green button** with plus icon in XLSX tab
 - Adds a new empty row to the end of the table
 - Creates row with all template headers initialized to empty strings
 - Shows success toast: "➕ New row added!"
 - **Disabled** when no data or template headers available
 
-### **2. Delete Last Row Button** 🗑️
-- **Red button** with trash icon
+### **3. Delete Last Row Button** 🗑️
+- **Red button** with trash icon in XLSX tab
 - Removes the last row from the table
 - Shows success toast: "🗑️ Last row deleted!"
 - **Disabled** when no data available
 
-### **3. Row Counter** 📊
+### **4. Row Counter** 📊
 - Displays total number of rows
 - Proper pluralization ("1 row" vs "2 rows")
 - Updates in real-time as rows are added/deleted
 - Positioned on the right side of the toolbar
 
+### **5. Undo/Redo Buttons** ↩️↪️
+- **Prominently displayed** in XLSX tab header
+- Quick access to undo/redo functionality
+- Disabled states when no history available
+- Keyboard shortcuts still work (Ctrl+Z, Ctrl+Shift+Z)
+
 ---
 
 ## 🎨 User Interface
 
-### **Row Management Toolbar:**
+### **Tabbed Interface in Preview Mode:**
 ```
 ┌─────────────────────────────────────────────────────────┐
+│  📊 Preview & Edit Data                                 │
+│  Your CSV data has been mapped to the template.         │
+├─────────────────────────────────────────────────────────┤
+│  [📊 XLSX Editor] [📄 CSV] [🔧 JSON] [🗄️ SQL] [📘 FB]  │
+├─────────────────────────────────────────────────────────┤
+│  📊 Edit Mapped Data          [↩️ Undo] [↪️ Redo]      │
+│  X rows loaded. Use Ctrl+Z to undo...                   │
+│                                                          │
 │  [➕ Add Row]  [🗑️ Delete Last Row]        X rows      │
-└─────────────────────────────────────────────────────────┘
-│                    Data Table                           │
+│                                                          │
 │  ┌───────────────────────────────────────────────────┐  │
 │  │ Header 1  │ Header 2  │ Header 3  │ ...          │  │
 │  ├───────────────────────────────────────────────────┤  │
 │  │ Value 1   │ Value 2   │ Value 3   │ ...          │  │
 │  │ ...       │ ...       │ ...       │ ...          │  │
 │  └───────────────────────────────────────────────────┘  │
+│                                                          │
+│  [🔄 Start Over]  [⬇️ Download XLSX]                   │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -193,11 +215,12 @@ const handleDeleteLastRow = useCallback(() => {
 
 ## ✅ Status
 
-**Build:** ✅ PASSING (4.12s)  
-**Bundle Size:** 594.46 kB (+1.94 kB from v2.2.0)  
-**Type Errors:** ✅ NONE  
-**Features Removed:** ✅ ZERO  
-**Undo/Redo:** ✅ WORKS WITH NEW ROWS  
+**Build:** ✅ PASSING (3.57s)
+**Bundle Size:** 598.61 kB (+4.15 kB from v2.2.0)
+**Type Errors:** ✅ NONE
+**Features Removed:** ✅ ZERO
+**Undo/Redo:** ✅ WORKS WITH NEW ROWS
+**Tabbed Interface:** ✅ INTEGRATED IN PREVIEW MODE
 
 ---
 
