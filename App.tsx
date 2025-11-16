@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { FileCsvIcon, XCircleIcon, DownloadIcon, LoaderIcon, FileXlsxIcon, RefreshCwIcon, UndoIcon, RedoIcon } from './components/Icons';
+import { FileCsvIcon, XCircleIcon, DownloadIcon, LoaderIcon, FileXlsxIcon, RefreshCwIcon, UndoIcon, RedoIcon, FileTextIcon, FileIcon } from './components/Icons';
 import { FileUploadZone } from './components/FileUploadZone';
 import { FileDisplay } from './components/FileDisplay';
 import { DataTable } from './components/DataTable';
@@ -8,15 +8,20 @@ import { JSONEditor } from './components/JSONEditor';
 import { SQLEditor } from './components/SQLEditor';
 import { validateTemplateFile, validateDataFile } from './utils/fileUtils';
 import { processTemplate, processCSVData, exportToXLSX, downloadCSVTemplate, generateCSVTemplate, convertXLSXDataToCSV, MappedDataRow } from './utils/xlsxUtils';
+import { downloadCSV } from './utils/downloadUtils';
+import { getButtonClasses } from './utils/buttonStyles';
 import { useUndoRedo } from './hooks/useUndoRedo';
+import toast, { Toaster } from 'react-hot-toast';
 
 type AppState = 'upload' | 'template-preview' | 'preview';
+type EditorTab = 'xlsx' | 'csv' | 'json' | 'sql' | 'export';
 
 const App: React.FC = () => {
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [dataFile, setDataFile] = useState<File | null>(null);
   const [templateHeaders, setTemplateHeaders] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [fileWarning, setFileWarning] = useState<string | null>(null);
   const [appState, setAppState] = useState<AppState>('upload');
@@ -30,6 +35,10 @@ const App: React.FC = () => {
 
   // State for template data (for XLSX editor)
   const [templateData, setTemplateData] = useState<any[][]>([]);
+  const [headerRowIndex, setHeaderRowIndex] = useState<number>(0);
+
+  // State for active editor tab
+  const [activeEditorTab, setActiveEditorTab] = useState<EditorTab>('export');
 
   // Use undo/redo hook for mapped data
   const {
@@ -45,6 +54,7 @@ const App: React.FC = () => {
   // Load default template on mount
   useEffect(() => {
     const loadDefaultTemplate = async () => {
+      setIsLoadingTemplate(true);
       try {
         // Get the base path from the current location
         // In production (GitHub Pages): /CSV-to-XLSX-Converter/
@@ -56,6 +66,7 @@ const App: React.FC = () => {
         const response = await fetch(templateUrl);
         if (!response.ok) {
           console.warn('Default template not found at:', templateUrl);
+          setIsLoadingTemplate(false);
           return;
         }
 
@@ -68,6 +79,8 @@ const App: React.FC = () => {
         await handleTemplateFileSelect(file);
       } catch (err) {
         console.error('Failed to load default template:', err);
+      } finally {
+        setIsLoadingTemplate(false);
       }
     };
 
@@ -121,16 +134,17 @@ const App: React.FC = () => {
     }
 
     try {
-      const { headers, data, headerRowIndex } = await processTemplate(file);
+      const { headers, data, headerRowIndex: templateHeaderRowIndex } = await processTemplate(file);
       setTemplateHeaders(headers);
       setTemplateFile(file);
+      setHeaderRowIndex(templateHeaderRowIndex);
 
       // Set template data for XLSX editor (all rows from the template)
       if (data && data.length > 0) {
         setTemplateData(data);
 
         // Convert the actual XLSX template data to CSV (starting from header row)
-        const csvContent = convertXLSXDataToCSV(data, headerRowIndex);
+        const csvContent = convertXLSXDataToCSV(data, templateHeaderRowIndex);
         setEditableCSV(csvContent);
       }
 
@@ -207,28 +221,30 @@ const App: React.FC = () => {
   const downloadXLSX = useCallback(() => {
     if (!dataFile || !mappedData) return;
     exportToXLSX(mappedData, templateHeaders, dataFile.name);
+    toast.success(`XLSX file exported successfully!`, {
+      icon: '📊',
+      duration: 3000,
+    });
   }, [dataFile, mappedData, templateHeaders]);
 
   const handleDownloadCSVTemplate = useCallback((includeExamples: boolean) => {
     if (templateHeaders.length === 0) return;
     const filename = templateFile ? templateFile.name.replace(/\.xlsx$/i, '_template.csv') : 'csv_template.csv';
     downloadCSVTemplate(templateHeaders, filename, includeExamples);
+    toast.success(`CSV template downloaded successfully!`, {
+      icon: '📥',
+      duration: 3000,
+    });
   }, [templateHeaders, templateFile]);
 
   const handleDownloadEditedCSV = useCallback(() => {
     if (!editableCSV) return;
-    const filename = templateFile ? templateFile.name.replace(/\.xlsx$/i, '_edited.csv') : 'edited_template.csv';
-    const blob = new Blob([editableCSV], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const filename = templateFile ? templateFile.name.replace(/\.xlsx$/i, '_edited') : 'edited_template';
+    downloadCSV(editableCSV, filename);
+    toast.success(`CSV file downloaded successfully!`, {
+      icon: '📥',
+      duration: 3000,
+    });
   }, [editableCSV, templateFile]);
 
   const handleBackToUpload = useCallback(() => {
@@ -241,6 +257,16 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col items-center justify-center p-4 font-sans">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          className: 'dark:bg-slate-800 dark:text-slate-200',
+          style: {
+            background: '#1e293b',
+            color: '#f1f5f9',
+          },
+        }}
+      />
       <div className="w-full max-w-5xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white">
@@ -252,25 +278,36 @@ const App: React.FC = () => {
         </header>
 
         <main className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 md:p-8">
-          {error && (
-            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md flex items-center" role="alert">
-              <XCircleIcon className="h-6 w-6 mr-3 flex-shrink-0" />
-              <div>
-                <p className="font-bold">Error</p>
-                <p>{error}</p>
-              </div>
+          {/* Loading State */}
+          {isLoadingTemplate && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <LoaderIcon className="h-12 w-12 text-indigo-600 dark:text-indigo-400 animate-spin mb-4" />
+              <p className="text-lg font-semibold text-slate-800 dark:text-slate-200">Loading template...</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">Please wait while we process your template</p>
             </div>
           )}
 
-          {fileWarning && !error && (
-            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-md" role="alert">
-              <p className="font-bold">Warning</p>
-              <p>{fileWarning}</p>
-            </div>
-          )}
+          {!isLoadingTemplate && (
+            <>
+              {error && (
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md flex items-center" role="alert">
+                  <XCircleIcon className="h-6 w-6 mr-3 flex-shrink-0" />
+                  <div>
+                    <p className="font-bold">Error</p>
+                    <p>{error}</p>
+                  </div>
+                </div>
+              )}
 
-          {appState === 'upload' && (
-            <div>
+              {fileWarning && !error && (
+                <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-md" role="alert">
+                  <p className="font-bold">Warning</p>
+                  <p>{fileWarning}</p>
+                </div>
+              )}
+
+              {appState === 'upload' && (
+                <div>
               {/* Step 1: Upload Template */}
               <div className="mb-6">
                 <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-3 flex items-center">
@@ -372,7 +409,7 @@ const App: React.FC = () => {
                   <button
                     onClick={processAndPreview}
                     disabled={isProcessing}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-300 disabled:bg-indigo-400 disabled:cursor-not-allowed transform hover:scale-105"
+                    className={getButtonClasses({ variant: 'primary', size: 'lg', fullWidth: true, disabled: isProcessing })}
                   >
                     {isProcessing ? (
                       <>
@@ -395,10 +432,10 @@ const App: React.FC = () => {
                   <li>Download your perfectly formatted XLSX file. All processing happens in your browser.</li>
                 </ol>
               </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {appState === 'template-preview' && (
+              {appState === 'template-preview' && (
             <div>
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">
@@ -424,65 +461,221 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* XLSX Editor */}
+              {/* Tabbed Editor Interface */}
               <div className="mb-6">
-                {templateData.length > 0 && (
-                  <XLSXEditor
-                    headers={templateHeaders}
-                    initialData={templateData}
-                    filename={templateFile?.name.replace(/\.xlsx$/i, '_edited.xlsx') || 'edited_template.xlsx'}
-                  />
-                )}
-              </div>
-
-              {/* Editable CSV Template */}
-              <div className="mb-6">
-                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                      Edit CSV Template
-                    </h3>
+                {/* Tab Navigation */}
+                <div className="border-b border-slate-200 dark:border-slate-700 mb-4">
+                  <nav className="flex flex-wrap space-x-1" aria-label="Editor tabs">
                     <button
-                      onClick={handleDownloadEditedCSV}
-                      className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors"
+                      onClick={() => setActiveEditorTab('export')}
+                      className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
+                        activeEditorTab === 'export'
+                          ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                      }`}
                     >
-                      <DownloadIcon className="h-4 w-4" />
-                      Download CSV
+                      📥 Export
                     </button>
-                  </div>
-                  <textarea
-                    value={editableCSV}
-                    onChange={(e) => setEditableCSV(e.target.value)}
-                    className="w-full h-64 font-mono text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 p-3 rounded border border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Edit your CSV template here..."
-                  />
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-                    💡 Edit the CSV content directly. Make sure to keep the header row intact.
-                  </p>
+                    <button
+                      onClick={() => setActiveEditorTab('xlsx')}
+                      className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
+                        activeEditorTab === 'xlsx'
+                          ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                      }`}
+                    >
+                      📊 XLSX Editor
+                    </button>
+                    <button
+                      onClick={() => setActiveEditorTab('csv')}
+                      className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
+                        activeEditorTab === 'csv'
+                          ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                      }`}
+                    >
+                      📄 CSV Editor
+                    </button>
+                    <button
+                      onClick={() => setActiveEditorTab('json')}
+                      className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
+                        activeEditorTab === 'json'
+                          ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                      }`}
+                    >
+                      🔧 JSON Editor
+                    </button>
+                    <button
+                      onClick={() => setActiveEditorTab('sql')}
+                      className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
+                        activeEditorTab === 'sql'
+                          ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                      }`}
+                    >
+                      🗄️ SQL Editor
+                    </button>
+                  </nav>
                 </div>
-              </div>
 
-              {/* JSON Editor */}
-              <div className="mb-6">
-                {templateData.length > 0 && (
-                  <JSONEditor
-                    headers={templateHeaders}
-                    data={templateData}
-                    filename={templateFile?.name || 'template.json'}
-                  />
-                )}
-              </div>
+                {/* Tab Content */}
+                <div className="min-h-[400px]">
+                  {activeEditorTab === 'export' && (
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-4">
+                        📥 Export Template
+                      </h3>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+                        Choose how you want to export your template. Download it as CSV to fill in your data, or use the other tabs to export in different formats.
+                      </p>
 
-              {/* SQL Editor */}
-              <div className="mb-6">
-                {templateData.length > 0 && (
-                  <SQLEditor
-                    headers={templateHeaders}
-                    data={templateData}
-                    filename={templateFile?.name || 'template.sql'}
-                    tableName="products"
-                  />
-                )}
+                      {/* CSV Export Options */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        {/* Option 1: With Sample Data */}
+                        <div className="bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-700 rounded-lg p-4 hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors">
+                          <div className="flex items-start mb-3">
+                            <div className="bg-indigo-100 dark:bg-indigo-900/50 rounded-lg p-2 mr-3">
+                              <FileTextIcon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-semibold text-slate-800 dark:text-slate-200">
+                                  CSV with Sample Data
+                                </h4>
+                                <span className="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-medium">
+                                  Recommended
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+                                Includes example rows to show the expected format. Perfect for first-time users.
+                              </p>
+                              <button
+                                onClick={() => handleDownloadCSVTemplate(true)}
+                                className={getButtonClasses({ variant: 'primary', size: 'sm', fullWidth: true })}
+                              >
+                                <DownloadIcon className="mr-2 h-4 w-4" />
+                                Download with Examples
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Option 2: Headers Only */}
+                        <div className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-slate-400 dark:hover:border-slate-500 transition-colors">
+                          <div className="flex items-start mb-3">
+                            <div className="bg-slate-100 dark:bg-slate-700 rounded-lg p-2 mr-3">
+                              <FileIcon className="h-6 w-6 text-slate-600 dark:text-slate-400" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                                CSV Headers Only
+                              </h4>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+                                Just the column headers, no sample data. For users who know the format.
+                              </p>
+                              <button
+                                onClick={() => handleDownloadCSVTemplate(false)}
+                                className={getButtonClasses({ variant: 'secondary', size: 'sm', fullWidth: true })}
+                              >
+                                <DownloadIcon className="mr-2 h-4 w-4" />
+                                Download Headers Only
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Other Format Options */}
+                      <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                          💡 Need a different format?
+                        </h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+                          Switch to the other tabs to export as <strong>XLSX</strong>, <strong>JSON</strong>, or <strong>SQL</strong>. Each editor has its own download button.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => setActiveEditorTab('xlsx')}
+                            className={getButtonClasses({ variant: 'tertiary', size: 'sm' })}
+                          >
+                            📊 Go to XLSX Editor
+                          </button>
+                          <button
+                            onClick={() => setActiveEditorTab('json')}
+                            className={getButtonClasses({ variant: 'tertiary', size: 'sm' })}
+                          >
+                            🔧 Go to JSON Editor
+                          </button>
+                          <button
+                            onClick={() => setActiveEditorTab('sql')}
+                            className={getButtonClasses({ variant: 'tertiary', size: 'sm' })}
+                          >
+                            🗄️ Go to SQL Editor
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeEditorTab === 'xlsx' && templateData.length > 0 && (
+                    <XLSXEditor
+                      headers={templateHeaders}
+                      initialData={templateData}
+                      filename={templateFile?.name.replace(/\.xlsx$/i, '_edited.xlsx') || 'edited_template.xlsx'}
+                    />
+                  )}
+
+                  {activeEditorTab === 'csv' && (
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                            Edit CSV Template
+                          </h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                            📊 {templateData.length > 0 ? templateData.length - 1 : 0} rows × {templateHeaders.length} columns
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleDownloadEditedCSV}
+                          className={getButtonClasses({ variant: 'success', size: 'md' })}
+                        >
+                          <DownloadIcon className="h-4 w-4 mr-2" />
+                          Download CSV
+                        </button>
+                      </div>
+                      <textarea
+                        value={editableCSV}
+                        onChange={(e) => setEditableCSV(e.target.value)}
+                        className="w-full h-64 font-mono text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 p-3 rounded border border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Edit your CSV template here..."
+                      />
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                        💡 Edit the CSV content directly. Make sure to keep the header row intact.
+                      </p>
+                    </div>
+                  )}
+
+                  {activeEditorTab === 'json' && templateData.length > 0 && (
+                    <JSONEditor
+                      headers={templateHeaders}
+                      data={templateData}
+                      filename={templateFile?.name || 'template.json'}
+                      headerRowIndex={headerRowIndex}
+                    />
+                  )}
+
+                  {activeEditorTab === 'sql' && templateData.length > 0 && (
+                    <SQLEditor
+                      headers={templateHeaders}
+                      data={templateData}
+                      filename={templateFile?.name || 'template.sql'}
+                      tableName="products"
+                      headerRowIndex={headerRowIndex}
+                    />
+                  )}
+                </div>
               </div>
 
               {/* Headers Display */}
@@ -504,32 +697,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Download Options */}
-              <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">
-                  📥 Download CSV Template
-                </h3>
-                <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
-                  Download a CSV template to fill in your data. You can edit it in Excel, Google Sheets, or any text editor.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={() => handleDownloadCSVTemplate(true)}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center transition-colors"
-                  >
-                    <DownloadIcon className="mr-2 h-4 w-4" />
-                    Download with Sample Data
-                  </button>
-                  <button
-                    onClick={() => handleDownloadCSVTemplate(false)}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center transition-colors"
-                  >
-                    <DownloadIcon className="mr-2 h-4 w-4" />
-                    Download Headers Only
-                  </button>
-                </div>
-              </div>
-
               {/* Instructions */}
               <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
@@ -547,22 +714,22 @@ const App: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={handleBackToUpload}
-                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 font-bold py-3 px-6 rounded-lg flex items-center justify-center transition-colors"
+                  className={`flex-1 ${getButtonClasses({ variant: 'secondary', size: 'lg' })}`}
                 >
                   <RefreshCwIcon className="mr-2 h-5 w-5" />
                   Change Template
                 </button>
                 <button
                   onClick={handleContinueToDataUpload}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center transition-colors transform hover:scale-105"
+                  className={`flex-1 ${getButtonClasses({ variant: 'primary', size: 'lg' })}`}
                 >
                   Continue to Upload CSV Data →
                 </button>
               </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {appState === 'preview' && (
+              {appState === 'preview' && (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
@@ -607,19 +774,21 @@ const App: React.FC = () => {
               <div className="mt-6 flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={startOver}
-                  className="w-full sm:w-auto bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-6 rounded-lg flex items-center justify-center transition-all duration-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200"
+                  className={`w-full sm:w-auto ${getButtonClasses({ variant: 'secondary', size: 'lg' })}`}
                 >
                   <RefreshCwIcon className="mr-2 h-5 w-5" /> Start Over
                 </button>
                 <button
                   onClick={downloadXLSX}
                   disabled={!mappedData || mappedData.length === 0}
-                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className={`w-full sm:w-auto ${getButtonClasses({ variant: 'primary', size: 'lg', disabled: !mappedData || mappedData.length === 0 })}`}
                 >
                   <DownloadIcon className="mr-2 h-5 w-5" /> Download XLSX
                 </button>
               </div>
-            </div>
+                </div>
+              )}
+            </>
           )}
         </main>
 

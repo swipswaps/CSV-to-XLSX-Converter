@@ -3,24 +3,31 @@
  * Displays template data in JSON format with editing and download
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { DownloadIcon } from './Icons';
+import { downloadJSON } from '../utils/downloadUtils';
 
 interface JSONEditorProps {
   headers: string[];
   data: any[][];
   filename: string;
+  headerRowIndex?: number;
 }
 
-export const JSONEditor: React.FC<JSONEditorProps> = ({ headers, data, filename }) => {
+export const JSONEditor: React.FC<JSONEditorProps> = ({
+  headers,
+  data,
+  filename,
+  headerRowIndex: providedHeaderRowIndex
+}) => {
   const [editableJSON, setEditableJSON] = useState<string>('');
 
   // Convert data to JSON format
   useEffect(() => {
     if (data.length === 0 || headers.length === 0) return;
 
-    // Find header row index
-    const headerRowIndex = data.findIndex(row => 
+    // Use provided headerRowIndex or find it
+    const headerRowIndex = providedHeaderRowIndex ?? data.findIndex(row =>
       row.some(cell => headers.includes(String(cell ?? '')))
     );
 
@@ -36,30 +43,36 @@ export const JSONEditor: React.FC<JSONEditorProps> = ({ headers, data, filename 
     }).filter(obj => Object.values(obj).some(val => val !== '')); // Remove empty rows
 
     setEditableJSON(JSON.stringify(jsonData, null, 2));
-  }, [headers, data]);
+  }, [headers, data, providedHeaderRowIndex]);
 
   const handleDownload = useCallback(() => {
     if (!editableJSON) return;
-    
-    const blob = new Blob([editableJSON], { type: 'application/json;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename.replace(/\.(xlsx|csv)$/i, '.json'));
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const jsonFilename = filename.replace(/\.(xlsx|csv)$/i, '');
+    downloadJSON(editableJSON, jsonFilename);
   }, [editableJSON, filename]);
+
+  // Calculate data statistics
+  const dataRowCount = useMemo(() => {
+    const headerIdx = providedHeaderRowIndex ?? data.findIndex(row =>
+      row.some(cell => headers.includes(String(cell ?? '')))
+    );
+    if (headerIdx === -1) return 0;
+    return data.slice(headerIdx + 1).filter(row =>
+      row.some(cell => cell !== null && cell !== undefined && cell !== '')
+    ).length;
+  }, [data, headers, providedHeaderRowIndex]);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-          Edit JSON Data
-        </h3>
+        <div>
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+            Edit JSON Data
+          </h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            📊 {dataRowCount} rows × {headers.length} columns
+          </p>
+        </div>
         <button
           onClick={handleDownload}
           className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors"

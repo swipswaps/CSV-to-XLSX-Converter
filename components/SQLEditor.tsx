@@ -3,25 +3,45 @@
  * Displays template data as SQL INSERT statements with editing and download
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { DownloadIcon } from './Icons';
+import { downloadSQL } from '../utils/downloadUtils';
 
 interface SQLEditorProps {
   headers: string[];
   data: any[][];
   filename: string;
   tableName?: string;
+  headerRowIndex?: number;
 }
 
-export const SQLEditor: React.FC<SQLEditorProps> = ({ headers, data, filename, tableName = 'products' }) => {
+export const SQLEditor: React.FC<SQLEditorProps> = ({
+  headers,
+  data,
+  filename,
+  tableName = 'products',
+  headerRowIndex: providedHeaderRowIndex
+}) => {
   const [editableSQL, setEditableSQL] = useState<string>('');
+
+  // Memoize sanitized column names to avoid redundant regex operations
+  const sanitizedColumns = useMemo(() =>
+    headers.map(h => h.toLowerCase().replace(/[^a-z0-9_]/g, '_')),
+    [headers]
+  );
+
+  // Memoize column names string for INSERT statements
+  const columnNamesStr = useMemo(() =>
+    sanitizedColumns.join(', '),
+    [sanitizedColumns]
+  );
 
   // Convert data to SQL INSERT statements
   useEffect(() => {
     if (data.length === 0 || headers.length === 0) return;
 
-    // Find header row index
-    const headerRowIndex = data.findIndex(row => 
+    // Use provided headerRowIndex or find it
+    const headerRowIndex = providedHeaderRowIndex ?? data.findIndex(row =>
       row.some(cell => headers.includes(String(cell ?? '')))
     );
 
@@ -38,46 +58,51 @@ export const SQLEditor: React.FC<SQLEditorProps> = ({ headers, data, filename, t
       return `'${escaped}'`;
     };
 
-    // Generate CREATE TABLE statement
-    const createTable = `-- Create table\nCREATE TABLE IF NOT EXISTS ${tableName} (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n${headers.map(h => `  ${h.toLowerCase().replace(/[^a-z0-9_]/g, '_')} VARCHAR(255)`).join(',\n')}\n);\n\n`;
+    // Generate CREATE TABLE statement using memoized columns
+    const createTable = `-- Create table\nCREATE TABLE IF NOT EXISTS ${tableName} (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n${sanitizedColumns.map(col => `  ${col} VARCHAR(255)`).join(',\n')}\n);\n\n`;
 
     // Generate INSERT statements
-    const dataRows = data.slice(headerRowIndex + 1).filter(row => 
+    const dataRows = data.slice(headerRowIndex + 1).filter(row =>
       row.some(cell => cell !== null && cell !== undefined && cell !== '')
     );
 
     const insertStatements = dataRows.map(row => {
       const values = row.map(escapeSQLValue).join(', ');
-      const columns = headers.map(h => h.toLowerCase().replace(/[^a-z0-9_]/g, '_')).join(', ');
-      return `INSERT INTO ${tableName} (${columns}) VALUES (${values});`;
+      return `INSERT INTO ${tableName} (${columnNamesStr}) VALUES (${values});`;
     }).join('\n');
 
     const sqlContent = createTable + '-- Insert data\n' + insertStatements;
     setEditableSQL(sqlContent);
-  }, [headers, data, tableName]);
+  }, [headers, data, tableName, providedHeaderRowIndex, sanitizedColumns, columnNamesStr]);
 
   const handleDownload = useCallback(() => {
     if (!editableSQL) return;
-    
-    const blob = new Blob([editableSQL], { type: 'text/plain;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename.replace(/\.(xlsx|csv)$/i, '.sql'));
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const sqlFilename = filename.replace(/\.(xlsx|csv)$/i, '');
+    downloadSQL(editableSQL, sqlFilename);
   }, [editableSQL, filename]);
+
+  // Calculate data statistics
+  const dataRowCount = useMemo(() => {
+    const headerIdx = providedHeaderRowIndex ?? data.findIndex(row =>
+      row.some(cell => headers.includes(String(cell ?? '')))
+    );
+    if (headerIdx === -1) return 0;
+    return data.slice(headerIdx + 1).filter(row =>
+      row.some(cell => cell !== null && cell !== undefined && cell !== '')
+    ).length;
+  }, [data, headers, providedHeaderRowIndex]);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-          Edit SQL Statements
-        </h3>
+        <div>
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+            Edit SQL Statements
+          </h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            📊 {dataRowCount} rows × {headers.length} columns
+          </p>
+        </div>
         <button
           onClick={handleDownload}
           className="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors"
