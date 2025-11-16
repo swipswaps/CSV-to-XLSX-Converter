@@ -1,5 +1,54 @@
 # Changelog
 
+## [2.2.0] - 2025-11-16 - Facebook Preview with Data Synchronization
+
+### 🎯 Major Features
+
+#### Facebook Post Preview & Editor
+- **Added:** New "Facebook Preview" tab with official Facebook styling
+- **Added:** Data source selector (Template or Mapped data)
+- **Added:** Row selector with slider and dropdown navigation
+- **Added:** Editable Facebook post preview with character counter (63,206 limit)
+- **Added:** "Save Across All Tabs" button - Updates data in XLSX, CSV, JSON, SQL tabs
+- **Added:** "Revert to Previous" button - Undo edits before saving
+- **Added:** Copy to clipboard and reset functionality
+- **Added:** Real-time character count with warning when limit exceeded
+
+#### Data Synchronization
+- **Added:** `handleFacebookSaveToTemplateData` - Updates template data across all tabs
+- **Added:** `handleFacebookSaveToMappedData` - Updates mapped data across all tabs
+- **Added:** Automatic CSV content regeneration when template data changes
+- **Added:** Toast notifications for successful saves
+- **Changed:** FacebookPreview now accepts callbacks for data updates
+- **Changed:** Edits in Facebook tab now persist across all editor tabs
+
+### 🎨 UI/UX Enhancements
+
+- **Added:** 4-button action bar (Save, Revert, Copy, Reset)
+- **Added:** Green "Save Across All Tabs" button (primary action)
+- **Added:** Amber "Revert to Previous" button (undo action)
+- **Added:** Disabled states for buttons when no changes made
+- **Added:** Updated help section with new feature descriptions
+- **Changed:** Button layout to responsive grid (1/2/4 columns)
+
+### 🔧 Technical Improvements
+
+- **Added:** `parsePostContentToRow` - Parses edited post back to row data
+- **Added:** `originalContent` state - Tracks content for revert functionality
+- **Added:** Smart parsing of "Header: Value" format back to array
+- **Changed:** FacebookPreview component now has 2 callback props
+- **Changed:** App.tsx now manages data updates from Facebook edits
+
+### 📊 Impact
+
+- ✅ Full data synchronization across all tabs
+- ✅ Non-destructive editing with revert capability
+- ✅ Zero features removed
+- ✅ All existing functionality preserved
+- ✅ Bundle size: 592.47 kB (+2.19 kB from v2.1.0)
+
+---
+
 ## [2.1.0] - 2025-11-16 - UX Improvements & Export Tab Reorganization
 
 ### 🎯 Major Features

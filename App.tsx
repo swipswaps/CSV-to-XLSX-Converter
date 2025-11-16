@@ -6,6 +6,7 @@ import { DataTable } from './components/DataTable';
 import { XLSXEditor } from './components/XLSXEditor';
 import { JSONEditor } from './components/JSONEditor';
 import { SQLEditor } from './components/SQLEditor';
+import { FacebookPreview } from './components/FacebookPreview';
 import { validateTemplateFile, validateDataFile } from './utils/fileUtils';
 import { processTemplate, processCSVData, exportToXLSX, downloadCSVTemplate, generateCSVTemplate, convertXLSXDataToCSV, MappedDataRow } from './utils/xlsxUtils';
 import { downloadCSV } from './utils/downloadUtils';
@@ -14,7 +15,7 @@ import { useUndoRedo } from './hooks/useUndoRedo';
 import toast, { Toaster } from 'react-hot-toast';
 
 type AppState = 'upload' | 'template-preview' | 'preview';
-type EditorTab = 'xlsx' | 'csv' | 'json' | 'sql' | 'export';
+type EditorTab = 'xlsx' | 'csv' | 'json' | 'sql' | 'export' | 'facebook';
 
 const App: React.FC = () => {
   const [templateFile, setTemplateFile] = useState<File | null>(null);
@@ -216,6 +217,36 @@ const App: React.FC = () => {
     const updatedData = [...mappedData];
     updatedData[rowIndex][header] = value;
     setMappedData(updatedData);
+  }, [mappedData, setMappedData]);
+
+  // Handle Facebook post edits - update template data
+  const handleFacebookSaveToTemplateData = useCallback((rowIndex: number, updatedRow: any[]) => {
+    const newTemplateData = [...templateData];
+    newTemplateData[rowIndex] = updatedRow;
+    setTemplateData(newTemplateData);
+
+    // Also update CSV content
+    const csvContent = convertXLSXDataToCSV(newTemplateData, headerRowIndex);
+    setEditableCSV(csvContent);
+
+    toast.success('Template data updated across all tabs!', {
+      icon: '✅',
+      duration: 3000,
+    });
+  }, [templateData, headerRowIndex]);
+
+  // Handle Facebook post edits - update mapped data
+  const handleFacebookSaveToMappedData = useCallback((rowIndex: number, updatedRow: any[]) => {
+    if (!mappedData) return;
+
+    const newMappedData = [...mappedData];
+    newMappedData[rowIndex] = updatedRow;
+    setMappedData(newMappedData);
+
+    toast.success('Mapped data updated across all tabs!', {
+      icon: '✅',
+      duration: 3000,
+    });
   }, [mappedData, setMappedData]);
 
   const downloadXLSX = useCallback(() => {
@@ -516,6 +547,16 @@ const App: React.FC = () => {
                     >
                       🗄️ SQL Editor
                     </button>
+                    <button
+                      onClick={() => setActiveEditorTab('facebook')}
+                      className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
+                        activeEditorTab === 'facebook'
+                          ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                      }`}
+                    >
+                      📘 Facebook Preview
+                    </button>
                   </nav>
                 </div>
 
@@ -673,6 +714,16 @@ const App: React.FC = () => {
                       filename={templateFile?.name || 'template.sql'}
                       tableName="products"
                       headerRowIndex={headerRowIndex}
+                    />
+                  )}
+
+                  {activeEditorTab === 'facebook' && templateData.length > 0 && (
+                    <FacebookPreview
+                      templateData={templateData}
+                      headerRowIndex={headerRowIndex}
+                      mappedData={mappedData}
+                      onSaveToTemplateData={handleFacebookSaveToTemplateData}
+                      onSaveToMappedData={handleFacebookSaveToMappedData}
                     />
                   )}
                 </div>
