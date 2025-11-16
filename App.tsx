@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { FileCsvIcon, XCircleIcon, DownloadIcon, LoaderIcon, FileXlsxIcon, RefreshCwIcon, UndoIcon, RedoIcon, FileTextIcon, FileIcon } from './components/Icons';
+import { FileCsvIcon, XCircleIcon, DownloadIcon, LoaderIcon, FileXlsxIcon, RefreshCwIcon, UndoIcon, RedoIcon, FileTextIcon, FileIcon, PlusIcon, TrashIcon } from './components/Icons';
 import { FileUploadZone } from './components/FileUploadZone';
 import { FileDisplay } from './components/FileDisplay';
 import { DataTable } from './components/DataTable';
@@ -217,6 +217,38 @@ const App: React.FC = () => {
     const updatedData = [...mappedData];
     updatedData[rowIndex][header] = value;
     setMappedData(updatedData);
+  }, [mappedData, setMappedData]);
+
+  // Add new empty row
+  const handleAddRow = useCallback(() => {
+    if (!mappedData || templateHeaders.length === 0) return;
+
+    // Create empty row with all headers
+    const newRow: MappedDataRow = {};
+    templateHeaders.forEach(header => {
+      newRow[header] = '';
+    });
+
+    const updatedData = [...mappedData, newRow];
+    setMappedData(updatedData);
+
+    toast.success('New row added!', {
+      icon: '➕',
+      duration: 2000,
+    });
+  }, [mappedData, templateHeaders, setMappedData]);
+
+  // Delete last row
+  const handleDeleteLastRow = useCallback(() => {
+    if (!mappedData || mappedData.length === 0) return;
+
+    const updatedData = mappedData.slice(0, -1);
+    setMappedData(updatedData);
+
+    toast.success('Last row deleted!', {
+      icon: '🗑️',
+      duration: 2000,
+    });
   }, [mappedData, setMappedData]);
 
   // Handle Facebook post edits - update template data
@@ -814,6 +846,33 @@ const App: React.FC = () => {
                   Use <kbd className="px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded text-xs">Ctrl+Z</kbd> to undo and
                   <kbd className="px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded text-xs ml-1">Ctrl+Shift+Z</kbd> to redo changes.
                 </p>
+              </div>
+
+              {/* Row Management Buttons */}
+              <div className="mb-4 flex flex-wrap gap-3">
+                <button
+                  onClick={handleAddRow}
+                  disabled={!mappedData || templateHeaders.length === 0}
+                  className={`${getButtonClasses({ variant: 'success', size: 'md', disabled: !mappedData || templateHeaders.length === 0 })} flex items-center gap-2`}
+                  title="Add a new empty row to the end of the table"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  <span>Add Row</span>
+                </button>
+                <button
+                  onClick={handleDeleteLastRow}
+                  disabled={!mappedData || mappedData.length === 0}
+                  className={`${getButtonClasses({ variant: 'danger', size: 'md', disabled: !mappedData || mappedData.length === 0 })} flex items-center gap-2`}
+                  title="Delete the last row from the table"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                  <span>Delete Last Row</span>
+                </button>
+                <div className="flex-1"></div>
+                <div className="text-sm text-slate-600 dark:text-slate-400 flex items-center">
+                  <span className="font-medium">{mappedData?.length || 0}</span>
+                  <span className="ml-1">row{(mappedData?.length || 0) !== 1 ? 's' : ''}</span>
+                </div>
               </div>
 
               <DataTable

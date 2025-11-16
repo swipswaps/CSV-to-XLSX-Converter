@@ -1,5 +1,49 @@
 # Changelog
 
+## [2.3.0] - 2025-11-16 - Row Management & Title Update
+
+### 🎯 Major Features
+
+#### Row Management
+- **Added:** "Add Row" button - Insert new empty rows to the data table
+- **Added:** "Delete Last Row" button - Remove the last row from the table
+- **Added:** Row counter display showing total number of rows
+- **Added:** Toast notifications for row operations
+- **Added:** PlusIcon and TrashIcon to icon library
+
+#### Title & Branding Update
+- **Changed:** App title from "CSV to XLSX Converter" to "Marketplace Data Editor"
+- **Changed:** Browser tab title to "Marketplace Data Editor - Multi-Format Template Mapper"
+- **Changed:** Main heading and subtitle to list all 5 formats (XLSX, CSV, JSON, SQL, Facebook)
+- **Changed:** Package name to "marketplace-data-editor"
+- **Changed:** Package version to 2.3.0
+- **Updated:** README with new title and Facebook Preview documentation
+
+### 🎨 UI/UX Enhancements
+
+- **Added:** Row management toolbar above data table
+- **Added:** Visual row counter with proper pluralization
+- **Added:** Success/danger button variants for add/delete actions
+- **Added:** Disabled states when no data available
+- **Added:** Tooltips explaining button actions
+
+### 🔧 Technical Improvements
+
+- **Added:** `handleAddRow` - Creates empty row with all template headers
+- **Added:** `handleDeleteLastRow` - Removes last row from data
+- **Added:** Row count display with responsive layout
+- **Changed:** Better button organization with flex layout
+
+### 📊 Impact
+
+- ✅ Users can now add/remove rows without re-uploading data
+- ✅ More accurate app branding and SEO
+- ✅ Better discoverability with comprehensive title
+- ✅ Zero features removed
+- ✅ Bundle size: 594.46 kB (+1.94 kB from v2.2.0)
+
+---
+
 ## [2.2.0] - 2025-11-16 - Facebook Preview with Data Synchronization
 
 ### 🎯 Major Features
