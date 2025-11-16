@@ -3,8 +3,11 @@ import { FileCsvIcon, XCircleIcon, DownloadIcon, LoaderIcon, FileXlsxIcon, Refre
 import { FileUploadZone } from './components/FileUploadZone';
 import { FileDisplay } from './components/FileDisplay';
 import { DataTable } from './components/DataTable';
+import { XLSXEditor } from './components/XLSXEditor';
+import { JSONEditor } from './components/JSONEditor';
+import { SQLEditor } from './components/SQLEditor';
 import { validateTemplateFile, validateDataFile } from './utils/fileUtils';
-import { processTemplate, processCSVData, exportToXLSX, downloadCSVTemplate, generateCSVTemplate, MappedDataRow } from './utils/xlsxUtils';
+import { processTemplate, processCSVData, exportToXLSX, downloadCSVTemplate, generateCSVTemplate, convertXLSXDataToCSV, MappedDataRow } from './utils/xlsxUtils';
 import { useUndoRedo } from './hooks/useUndoRedo';
 
 type AppState = 'upload' | 'template-preview' | 'preview';
@@ -21,6 +24,12 @@ const App: React.FC = () => {
 
   const [isDraggingTemplate, setIsDraggingTemplate] = useState<boolean>(false);
   const [isDraggingData, setIsDraggingData] = useState<boolean>(false);
+
+  // State for editable CSV content
+  const [editableCSV, setEditableCSV] = useState<string>('');
+
+  // State for template data (for XLSX editor)
+  const [templateData, setTemplateData] = useState<any[][]>([]);
 
   // Use undo/redo hook for mapped data
   const {
@@ -112,9 +121,19 @@ const App: React.FC = () => {
     }
 
     try {
-      const { headers } = await processTemplate(file);
+      const { headers, data, headerRowIndex } = await processTemplate(file);
       setTemplateHeaders(headers);
       setTemplateFile(file);
+
+      // Set template data for XLSX editor (all rows from the template)
+      if (data && data.length > 0) {
+        setTemplateData(data);
+
+        // Convert the actual XLSX template data to CSV (starting from header row)
+        const csvContent = convertXLSXDataToCSV(data, headerRowIndex);
+        setEditableCSV(csvContent);
+      }
+
       // Automatically show template preview after successful upload
       setAppState('template-preview');
     } catch (err) {
@@ -195,6 +214,22 @@ const App: React.FC = () => {
     const filename = templateFile ? templateFile.name.replace(/\.xlsx$/i, '_template.csv') : 'csv_template.csv';
     downloadCSVTemplate(templateHeaders, filename, includeExamples);
   }, [templateHeaders, templateFile]);
+
+  const handleDownloadEditedCSV = useCallback(() => {
+    if (!editableCSV) return;
+    const filename = templateFile ? templateFile.name.replace(/\.xlsx$/i, '_edited.csv') : 'edited_template.csv';
+    const blob = new Blob([editableCSV], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [editableCSV, templateFile]);
 
   const handleBackToUpload = useCallback(() => {
     setAppState('upload');
@@ -389,14 +424,70 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Expected CSV Format */}
+              {/* XLSX Editor */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3">
-                  Expected CSV Format
-                </h3>
+                {templateData.length > 0 && (
+                  <XLSXEditor
+                    headers={templateHeaders}
+                    initialData={templateData}
+                    filename={templateFile?.name.replace(/\.xlsx$/i, '_edited.xlsx') || 'edited_template.xlsx'}
+                  />
+                )}
+              </div>
 
-                {/* Headers Display */}
-                <div className="bg-slate-100 dark:bg-slate-700/50 rounded-lg p-4 mb-4">
+              {/* Editable CSV Template */}
+              <div className="mb-6">
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                      Edit CSV Template
+                    </h3>
+                    <button
+                      onClick={handleDownloadEditedCSV}
+                      className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors"
+                    >
+                      <DownloadIcon className="h-4 w-4" />
+                      Download CSV
+                    </button>
+                  </div>
+                  <textarea
+                    value={editableCSV}
+                    onChange={(e) => setEditableCSV(e.target.value)}
+                    className="w-full h-64 font-mono text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 p-3 rounded border border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Edit your CSV template here..."
+                  />
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                    💡 Edit the CSV content directly. Make sure to keep the header row intact.
+                  </p>
+                </div>
+              </div>
+
+              {/* JSON Editor */}
+              <div className="mb-6">
+                {templateData.length > 0 && (
+                  <JSONEditor
+                    headers={templateHeaders}
+                    data={templateData}
+                    filename={templateFile?.name || 'template.json'}
+                  />
+                )}
+              </div>
+
+              {/* SQL Editor */}
+              <div className="mb-6">
+                {templateData.length > 0 && (
+                  <SQLEditor
+                    headers={templateHeaders}
+                    data={templateData}
+                    filename={templateFile?.name || 'template.sql'}
+                    tableName="products"
+                  />
+                )}
+              </div>
+
+              {/* Headers Display */}
+              <div className="mb-6">
+                <div className="bg-slate-100 dark:bg-slate-700/50 rounded-lg p-4">
                   <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     Required Column Headers:
                   </h4>
@@ -410,20 +501,6 @@ const App: React.FC = () => {
                       </span>
                     ))}
                   </div>
-                </div>
-
-                {/* CSV Preview */}
-                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      CSV Template Preview (with sample data):
-                    </h4>
-                  </div>
-                  <pre className="text-xs bg-white dark:bg-slate-900 p-3 rounded border border-slate-200 dark:border-slate-700 overflow-x-auto">
-                    <code className="text-slate-800 dark:text-slate-200">
-                      {generateCSVTemplate(templateHeaders, true)}
-                    </code>
-                  </pre>
                 </div>
               </div>
 

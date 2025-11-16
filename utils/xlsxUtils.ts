@@ -10,6 +10,7 @@ declare const XLSX: any;
 export interface TemplateProcessResult {
   headers: string[];
   headerRowIndex: number;
+  data?: any[][]; // Optional: all rows from the template
 }
 
 export interface MappedDataRow {
@@ -54,7 +55,7 @@ export const processTemplate = async (file: File): Promise<TemplateProcessResult
     );
   }
 
-  return { headers, headerRowIndex };
+  return { headers, headerRowIndex, data: data as any[][] };
 };
 
 /**
@@ -180,6 +181,28 @@ export const exportToXLSX = (
 
   const outputFilename = originalFileName.replace(/\.csv$/i, '_mapped.xlsx');
   XLSX.writeFile(workbook, outputFilename);
+};
+
+/**
+ * Convert XLSX data array to CSV string
+ */
+export const convertXLSXDataToCSV = (data: any[][], startRow: number = 0): string => {
+  // Escape CSV field if it contains comma, quote, or newline
+  const escapeCSVField = (field: any): string => {
+    const fieldStr = String(field ?? '');
+    if (fieldStr.includes(',') || fieldStr.includes('"') || fieldStr.includes('\n')) {
+      return `"${fieldStr.replace(/"/g, '""')}"`;
+    }
+    return fieldStr;
+  };
+
+  // Convert each row to CSV format
+  const csvRows = data.slice(startRow).map(row => {
+    if (!row || row.length === 0) return '';
+    return row.map(escapeCSVField).join(',');
+  }).filter(row => row); // Remove empty rows
+
+  return csvRows.join('\n');
 };
 
 /**
