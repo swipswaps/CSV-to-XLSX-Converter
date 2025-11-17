@@ -1,5 +1,83 @@
 # Changelog
 
+## [2.5.0] - 2025-11-17 - OCR Image Import + Row Management Fixes
+
+### 🎯 Major Features
+
+#### OCR Image Import (Inspired by OCR-Data-Exporter)
+- **Added:** New "📸 OCR Import" tab for extracting data from images
+- **Added:** Drag-and-drop image upload interface
+- **Added:** Multi-file image processing with status tracking
+- **Added:** Image preview grid showing all uploaded files
+- **Added:** File status indicators (pending/processing/success/error)
+- **Added:** Support for PNG, JPG, HEIC, and other image formats
+- **Added:** Placeholder for Gemini AI OCR extraction
+- **Added:** Instructions for configuring Gemini API key
+- **Added:** UploadIcon component for file upload UI
+- **Added:** ImageOCR component with full drag-and-drop functionality
+- **Integration:** OCR extracted data can be imported directly into template data
+- **UX:** Toast notifications for OCR processing status
+- **Note:** Requires Gemini API key configuration for production use
+
+### 🐛 Critical Bug Fixes
+
+#### Race Condition Fix - Duplicate/Delete Row Buttons
+- **Fixed:** Duplicate Row and Delete Row buttons were visible but not functioning
+- **Root Cause:** Spreadsheet fires `EmptySelection` event when button clicked, clearing selection state BEFORE `onClick` handler executes
+- **Solution:** Replace `onClick` with `onMouseDown` (fires before blur/selection change)
+- **Solution:** Add `e.preventDefault()` to prevent default button behavior
+- **Solution:** Add `selectedRef` (useRef) to preserve selection state across async operations
+- **Solution:** Update `selectedRef.current` alongside `setSelected()` in `handleSelect`
+- **Solution:** Read from `selectedRef.current` instead of `selected` state in handlers
+- **Result:** Buttons now work reliably - row duplication and deletion confirmed working
+
+#### Simplified Row Selection (Option C)
+- **Changed:** `isFullRow` check from strict `start.column === 0 && end.column === data[0].length - 1`
+- **Changed:** To simple single-row check `start.row === end.row`
+- **Result:** Duplicate/Delete buttons now appear for ANY selection within a single row
+- **UX:** Much easier - no need to select from first to last column exactly
+
+#### Custom RowIndicator Dropdown Menu (Option A)
+- **Added:** MoreVerticalIcon component (⋮ three-dot menu icon)
+- **Added:** CustomRowIndicator component with dropdown menu on row numbers
+- **Added:** Menu items: "Duplicate Row" and "Delete Row"
+- **Added:** Outside-click detection with useRef + useEffect
+- **Added:** Hover-visible menu button (opacity-0 group-hover:opacity-100)
+- **Fixed:** Boolean conversion bug: `(onDuplicate || onDelete)` → `!!(onDuplicate || onDelete)`
+- **UX:** Menu hidden on header row (row 0)
+- **UX:** Two ways to manage rows: hover menu OR selection buttons
+
+### 🎨 UI/UX Enhancements
+
+- **Updated:** Instructional banner explaining both row management methods
+- **Updated:** Help text in XLSX editor for dropdown menu usage
+- **Added:** Toast notifications with icons for duplicate/delete actions
+- **Improved:** Memoized RowIndicator component for better performance
+
+### 🔧 Technical Improvements
+
+- **Pattern:** `onMouseDown` fires before `onBlur`, capturing click before selection clears
+- **Pattern:** `useRef` provides stable reference that survives re-renders
+- **Pattern:** `selectedRef.current` updated synchronously with state changes
+- **Pattern:** Handlers read from ref to avoid race conditions with async state updates
+- **Cleanup:** Removed all debug console.log statements
+- **Cleanup:** Removed test files (test-simple-duplicate.mjs, test-dropdown.mjs, test-ux.mjs, test-manual.mjs, test-option-c.mjs)
+
+### 📦 Bundle Size
+
+- **Size:** 615.18 kB (increased from 607.37 kB due to OCR component)
+- **Gzip:** 182.21 kB
+- **Build Time:** 4.92s
+- **Status:** ✅ PASSING
+
+### 🧪 Testing
+
+- **Automated:** Playwright tests confirmed row duplication works correctly
+- **Manual:** Dropdown menu tested and functional
+- **Manual:** OCR tab renders correctly with drag-and-drop interface
+
+---
+
 ## [2.4.0] - 2025-11-16 - Excel-like Row Selection, Delete & Duplicate
 
 ### 🎯 Major Features
