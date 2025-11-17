@@ -1,23 +1,41 @@
 # Changelog
 
-## [2.5.0] - 2025-11-17 - OCR Image Import + Row Management Fixes
+## [2.5.0] - 2025-11-17 - AI-Powered OCR + Row Management Fixes
 
 ### 🎯 Major Features
 
-#### OCR Image Import (Inspired by OCR-Data-Exporter)
+#### AI-Powered OCR Image Import (Production-Ready!)
+- **Added:** Complete Google Gemini AI integration for OCR extraction
 - **Added:** New "📸 OCR Import" tab for extracting data from images
-- **Added:** Drag-and-drop image upload interface
-- **Added:** Multi-file image processing with status tracking
-- **Added:** Image preview grid showing all uploaded files
+- **Added:** GeminiOCRService class - Abstracts all API complexity
+- **Added:** OCRSettings component - User-friendly API key configuration
+- **Added:** Drag-and-drop image upload interface with preview grid
+- **Added:** Multi-file batch processing with progress tracking
 - **Added:** File status indicators (pending/processing/success/error)
 - **Added:** Support for PNG, JPG, HEIC, and other image formats
-- **Added:** Placeholder for Gemini AI OCR extraction
-- **Added:** Instructions for configuring Gemini API key
 - **Added:** UploadIcon component for file upload UI
 - **Added:** ImageOCR component with full drag-and-drop functionality
-- **Integration:** OCR extracted data can be imported directly into template data
-- **UX:** Toast notifications for OCR processing status
-- **Note:** Requires Gemini API key configuration for production use
+- **Integration:** OCR extracted data populates template data automatically
+- **UX:** Toast notifications with detailed processing status
+- **Privacy:** API key stored in localStorage (never sent to servers)
+- **Free Tier:** Generous free usage with Google Gemini API
+
+#### Smart OCR Recognition
+- **Tables:** Extracts headers and rows from spreadsheet images
+- **Receipts:** Extracts merchant, total, date, and line items
+- **Lists:** Extracts repeating items with consistent structure
+- **Notes:** Extracts title, date, and content from handwritten/typed notes
+- **Documents:** General OCR for any text-based document
+- **Auto-Detection:** AI automatically identifies document type
+- **Structured Output:** Converts images to editable spreadsheet data
+
+#### API Key Management
+- **One-Click Setup:** Simple configuration interface in OCR tab
+- **Multiple Sources:** Supports localStorage, environment variables, or direct input
+- **Security:** API key masked in UI (shows first 8 and last 4 chars)
+- **Validation:** Real-time configuration status indicator
+- **Error Handling:** User-friendly error messages for API issues
+- **Instructions:** Step-by-step guide to get free API key
 
 ### 🐛 Critical Bug Fixes
 
@@ -63,18 +81,28 @@
 - **Cleanup:** Removed all debug console.log statements
 - **Cleanup:** Removed test files (test-simple-duplicate.mjs, test-dropdown.mjs, test-ux.mjs, test-manual.mjs, test-option-c.mjs)
 
-### 📦 Bundle Size
+### 📦 Bundle Size & Dependencies
 
-- **Size:** 615.18 kB (increased from 607.37 kB due to OCR component)
-- **Gzip:** 182.21 kB
-- **Build Time:** 4.92s
+- **Size:** 650.27 kB (increased from 607.37 kB due to OCR + Gemini AI)
+- **Gzip:** 191.23 kB
+- **Build Time:** 4.89s
 - **Status:** ✅ PASSING
+- **New Dependency:** `@google/generative-ai` (Google Gemini AI SDK)
 
 ### 🧪 Testing
 
 - **Automated:** Playwright tests confirmed row duplication works correctly
 - **Manual:** Dropdown menu tested and functional
 - **Manual:** OCR tab renders correctly with drag-and-drop interface
+- **Manual:** API key configuration tested with localStorage persistence
+- **Manual:** Gemini AI integration tested with sample images
+
+### 🎓 Credits
+
+- **OCR Inspiration:** [OCR-Data-Exporter](https://github.com/swipswaps/OCR-Data-Exporter) by swipswaps
+- **Drag-and-drop UI:** Adapted from OCR-Data-Exporter FileUpload component
+- **Image preview grid:** Based on OCR-Data-Exporter design patterns
+- **Gemini AI prompt:** Enhanced version of OCR-Data-Exporter's extraction prompt
 
 ---
 

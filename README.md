@@ -1,10 +1,24 @@
 # Marketplace Data Editor
 
-A high-performance, browser-based data editor with template mapping, multi-format editing, Facebook preview, and advanced features. Map, edit, preview, and export your marketplace data in **XLSX, CSV, JSON, SQL, and Facebook** formats - all in your browser with zero server uploads!
+A high-performance, browser-based data editor with **AI-powered OCR**, template mapping, multi-format editing, Facebook preview, and advanced features. Extract data from images, map, edit, preview, and export your marketplace data in **XLSX, CSV, JSON, SQL, and Facebook** formats - all in your browser with zero server uploads!
 
 🌐 **Live Demo:** [https://swipswaps.github.io/CSV-to-XLSX-Converter/](https://swipswaps.github.io/CSV-to-XLSX-Converter/)
 
 ## ✨ Features
+
+### 🆕 AI-Powered OCR (NEW!)
+- 📸 **Image to Data**: Extract structured data from images using Google Gemini AI
+- 🖼️ **Multi-File Processing**: Upload and process multiple images at once
+- 📋 **Smart Recognition**: Automatically detects tables, receipts, lists, notes, and documents
+- 🎯 **Structured Output**: Converts images to editable spreadsheet data
+- 🔒 **Privacy First**: API key stored locally in your browser
+- 🆓 **Free Tier Available**: Generous free usage with Google Gemini API
+- **Supported Formats:**
+  - **Tables**: Spreadsheets, data grids with headers and rows
+  - **Receipts**: Purchase receipts with merchant, total, date, items
+  - **Lists**: Inventory lists, product catalogs, structured text
+  - **Notes**: Handwritten or typed notes with title and content
+  - **Documents**: Any text-based document for general OCR
 
 ### Core Functionality
 - 📊 **Template-Based Mapping**: Upload an XLSX template to define output structure
@@ -16,7 +30,12 @@ A high-performance, browser-based data editor with template mapping, multi-forma
 - 🎨 **Dark Mode Support**: Beautiful UI with automatic dark mode
 
 ### Multi-Format Editors
-- 📊 **XLSX Editor**: Interactive spreadsheet with cell editing and Tab navigation
+- 📊 **XLSX Editor**: Interactive spreadsheet with cell editing, row management, and Excel-like features
+  - **Row Selection**: Click row numbers or select cells to manage rows
+  - **Duplicate Row**: Copy any row with one click (dropdown menu or selection button)
+  - **Delete Row**: Remove any row (dropdown menu or selection button)
+  - **Copy Cells**: Copy selected cells to clipboard (Ctrl+C or button)
+  - **Shift+Click**: Select multiple cells at once
 - 📝 **CSV Editor**: Editable textarea with proper comma/quote escaping (RFC 4180)
 - 🟣 **JSON Editor**: Pretty-printed JSON array with syntax highlighting
 - 🟠 **SQL Editor**: Auto-generated CREATE TABLE + INSERT statements
@@ -25,6 +44,7 @@ A high-performance, browser-based data editor with template mapping, multi-forma
   - **Revert to Previous**: Undo changes before saving
   - **Row Selector**: Scroll through or jump to any row
   - **Character Counter**: Real-time validation (63,206 limit)
+- 📸 **OCR Import**: Extract data from images with AI-powered recognition
 
 ### Performance Optimizations
 - ⚡ **Virtual Scrolling**: Smoothly handle datasets with 10,000+ rows
@@ -67,6 +87,29 @@ A high-performance, browser-based data editor with template mapping, multi-forma
 4. **Open your browser**
    Navigate to `http://localhost:3000`
 
+### 🔑 OCR Setup (Optional)
+
+To enable AI-powered image data extraction:
+
+1. **Get a free Gemini API key**
+   - Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+   - Sign in with your Google account
+   - Click "Create API Key" or "Get API Key"
+   - Copy the generated key
+
+2. **Configure in the app**
+   - Open the app and navigate to the "📸 OCR Import" tab
+   - Click "Setup" in the OCR Configuration section
+   - Paste your API key and click "Save"
+   - Your key is stored locally in your browser (never sent to our servers)
+
+3. **Start extracting data**
+   - Upload images of receipts, tables, or documents
+   - Click "Extract Data" and watch the AI work!
+   - Extracted data appears in the spreadsheet editor
+
+**Note:** The Gemini API offers a generous free tier. Your API key is stored in `localStorage` and never leaves your browser.
+
 ## 📖 User Guide
 
 ### 🚀 Quick Start (First Time Users)
@@ -74,11 +117,52 @@ A high-performance, browser-based data editor with template mapping, multi-forma
 The app **automatically loads** with a default marketplace template when you open it!
 
 1. **App Opens** → Template preview appears immediately
-2. **Explore the Editors** → See your template in 4 different formats
+2. **Explore the Editors** → See your template in 6 different formats (XLSX, CSV, JSON, SQL, Facebook, OCR)
 3. **Edit & Download** → Modify data and export in your preferred format
 4. **Upload CSV Data** → Click "Continue to Upload CSV Data" to convert your data
+5. **Or Use OCR** → Upload images to extract data automatically with AI
 
-### Workflow 1: Edit & Export Template in Multiple Formats
+### Workflow 1: Extract Data from Images with OCR (NEW!)
+
+**Use Case:** You have images of receipts, tables, or documents and want to extract structured data
+
+1. **Navigate to OCR Tab**
+   - Click the **"📸 OCR Import"** tab
+   - First time: Click "Setup" to configure your Gemini API key
+
+2. **Configure API Key (One-Time Setup)**
+   - Get a free API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+   - Paste it in the configuration section
+   - Click "Save" - your key is stored locally in your browser
+
+3. **Upload Images**
+   - Drag and drop images or click to browse
+   - Supports PNG, JPG, HEIC, and other image formats
+   - Upload multiple images at once for batch processing
+
+4. **Extract Data**
+   - Click **"🚀 Extract Data from X File(s)"**
+   - AI processes each image and extracts structured data
+   - Progress indicators show processing status
+   - Success/error icons appear for each file
+
+5. **Review & Edit**
+   - Extracted data automatically populates the XLSX editor
+   - Switch to other tabs to see data in different formats
+   - Edit, add rows, or delete rows as needed
+
+6. **Export**
+   - Download as XLSX, CSV, JSON, or SQL
+   - Or preview as Facebook posts
+
+**Supported Image Types:**
+- **Tables**: Spreadsheets, data grids with headers and rows
+- **Receipts**: Purchase receipts with merchant, total, date, items
+- **Lists**: Inventory lists, product catalogs, structured text
+- **Notes**: Handwritten or typed notes with title and content
+- **Documents**: Any text-based document for general OCR
+
+### Workflow 2: Edit & Export Template in Multiple Formats
 
 **Use Case:** You have a marketplace template and want to export it in different formats (CSV, JSON, SQL)
 
@@ -92,6 +176,11 @@ The app **automatically loads** with a default marketplace template when you ope
    - Interactive spreadsheet grid with all template data
    - Click any cell to edit the value
    - Press Tab to move to next cell
+   - **Row Management:**
+     - Hover over row number → Click ⋮ menu → Duplicate or Delete
+     - Or select cells in a row → Use "Duplicate Row" or "Delete Row" buttons
+     - Shift+Click to select multiple cells
+     - Ctrl+C to copy selected cells
    - Click **"Save As XLSX"** to download edited spreadsheet
 
    **📝 CSV Editor (Text)**
@@ -113,11 +202,18 @@ The app **automatically loads** with a default marketplace template when you ope
    - Single quotes properly escaped
    - Click **"Download SQL"** to save
 
+   **📘 Facebook Preview**
+   - Preview any row as a Facebook post
+   - Edit post content directly
+   - Save changes back to all tabs
+   - Revert to previous version
+   - Character counter (63,206 limit)
+
 3. **Upload Different Template (Optional)**
    - Click **"Upload Different Template"** to change the template
    - Or click **"Change Template"** to go back to upload screen
 
-### Workflow 2: Convert CSV Data to XLSX
+### Workflow 3: Convert CSV Data to XLSX
 
 **Use Case:** You have CSV data and want to convert it to XLSX format using a template
 
@@ -144,7 +240,7 @@ The app **automatically loads** with a default marketplace template when you ope
    - Click **"Download XLSX"** to save your formatted file
    - File will match the template structure exactly
 
-### Workflow 3: Create CSV Template from XLSX
+### Workflow 4: Create CSV Template from XLSX
 
 **Use Case:** You have an XLSX template and need a CSV version to fill in
 

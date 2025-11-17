@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { UploadIcon } from './Icons';
+import { OCRSettings } from './OCRSettings';
+import { geminiService } from '../services/geminiService';
 
 interface ImageOCRProps {
   onDataExtracted: (data: any[][]) => void;
@@ -12,6 +14,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
   const [processing, setProcessing] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [fileStatuses, setFileStatuses] = useState<Record<string, 'pending' | 'processing' | 'success' | 'error'>>({});
+  const [isApiConfigured, setIsApiConfigured] = useState(geminiService.isConfigured());
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -80,10 +83,13 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
   };
 
   const extractDataFromImage = async (image: { mimeType: string; data: string }): Promise<any[]> => {
-    // This is a placeholder - in production, you would call the Gemini API
-    // For now, we'll simulate OCR extraction
-    toast.error('OCR extraction requires Gemini API key. Please configure GEMINI_API_KEY in environment variables.');
-    throw new Error('Gemini API not configured');
+    const result = await geminiService.extractDataFromImage(image);
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to extract data');
+    }
+
+    return result.data || [];
   };
 
   const handleProcess = async () => {
@@ -92,8 +98,15 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
       return;
     }
 
+    if (!isApiConfigured) {
+      toast.error('Please configure your Gemini API key first');
+      return;
+    }
+
     setProcessing(true);
     const allData: any[][] = [];
+    let successCount = 0;
+    let errorCount = 0;
 
     for (const file of files) {
       try {
@@ -106,39 +119,46 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
         if (data && data.length > 0) {
           // Convert JSON objects to array format
           const headers = Object.keys(data[0]);
-          const rows = data.map(obj => headers.map(h => obj[h]));
+          const rows = data.map(obj => headers.map(h => obj[h] ?? ''));
           allData.push([headers, ...rows]);
-          
+
           setFileStatuses(prev => ({ ...prev, [file.name]: 'success' }));
-          toast.success(`Extracted ${data.length} rows from ${file.name}`, { id: file.name });
+          toast.success(`✅ Extracted ${data.length} rows from ${file.name}`, { id: file.name });
+          successCount++;
         } else {
           setFileStatuses(prev => ({ ...prev, [file.name]: 'success' }));
-          toast('No data found in ' + file.name, { id: file.name, icon: '⚠️' });
+          toast('⚠️ No data found in ' + file.name, { id: file.name, icon: '⚠️' });
         }
-      } catch (err) {
+      } catch (err: any) {
         setFileStatuses(prev => ({ ...prev, [file.name]: 'error' }));
-        toast.error(`Failed to process ${file.name}`, { id: file.name });
+        const errorMsg = err.message || 'Unknown error';
+        toast.error(`❌ ${file.name}: ${errorMsg}`, { id: file.name, duration: 5000 });
+        errorCount++;
       }
     }
 
     setProcessing(false);
 
     if (allData.length > 0) {
-      // Merge all data
+      // Merge all data - combine all rows with same headers
       const mergedData = allData.flat();
       onDataExtracted(mergedData);
-      toast.success('OCR extraction complete!');
+      toast.success(`🎉 OCR complete! ${successCount} file(s) processed successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`, { duration: 4000 });
+    } else if (errorCount > 0) {
+      toast.error(`Failed to extract data from ${errorCount} file(s)`, { duration: 4000 });
     }
   };
 
   return (
     <div className="space-y-6">
+      <OCRSettings onApiKeyChange={setIsApiConfigured} />
+
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
-          Upload Images for OCR Extraction
+          📸 Upload Images for OCR Extraction
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-          Upload images of receipts, tables, or printed documents. The AI will extract structured data automatically.
+          Upload images of receipts, tables, lists, or printed documents. Google Gemini AI will extract structured data automatically.
         </p>
 
         <label
@@ -203,25 +223,28 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
             </div>
             <button
               onClick={handleProcess}
-              disabled={processing}
+              disabled={processing || !isApiConfigured}
               className="mt-8 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             >
-              {processing ? 'Processing...' : `Extract Data from ${files.length} File(s)`}
+              {processing ? '⏳ Processing...' : !isApiConfigured ? '🔒 Configure API Key First' : `🚀 Extract Data from ${files.length} File(s)`}
             </button>
           </div>
         )}
 
-        <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-          <p className="text-sm text-yellow-800 dark:text-yellow-200">
-            <strong>⚠️ Note:</strong> OCR extraction requires a Gemini API key. This feature is currently a placeholder.
-            To enable it, you would need to:
-          </p>
-          <ul className="mt-2 text-sm text-yellow-700 dark:text-yellow-300 list-disc list-inside space-y-1">
-            <li>Get a Gemini API key from <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer" className="underline">Google AI Studio</a></li>
-            <li>Add it to your environment variables as <code className="bg-yellow-100 dark:bg-yellow-900/40 px-1 rounded">GEMINI_API_KEY</code></li>
-            <li>Implement the Gemini API call in the <code className="bg-yellow-100 dark:bg-yellow-900/40 px-1 rounded">extractDataFromImage</code> function</li>
-          </ul>
-        </div>
+        {isApiConfigured && (
+          <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <p className="text-sm text-green-800 dark:text-green-200">
+              <strong>✅ Ready to extract data!</strong> Supported formats:
+            </p>
+            <ul className="mt-2 text-sm text-green-700 dark:text-green-300 list-disc list-inside space-y-1">
+              <li><strong>Tables:</strong> Spreadsheets, data grids with headers and rows</li>
+              <li><strong>Receipts:</strong> Purchase receipts with merchant, total, date, items</li>
+              <li><strong>Lists:</strong> Inventory lists, product catalogs, structured text</li>
+              <li><strong>Notes:</strong> Handwritten or typed notes with title and content</li>
+              <li><strong>Documents:</strong> Any text-based document for general OCR</li>
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
