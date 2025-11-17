@@ -1,5 +1,63 @@
 # Changelog
 
+## [2.4.0] - 2025-11-16 - Excel-like Row Selection, Delete & Duplicate
+
+### 🎯 Major Features
+
+#### Row Selection & Management
+- **Added:** Click row number to select entire row in XLSX editor
+- **Added:** "Delete Row" button - Delete any selected row (appears when row selected)
+- **Added:** "Duplicate Row" button - Duplicate selected row immediately below
+- **Added:** Multi-cell selection with Shift+Click
+- **Added:** Copy selected cells to clipboard (Ctrl+C or Copy Cells button)
+- **Added:** Visual selection indicator showing selected row/cells
+- **Added:** Smart button states - Different actions for row vs cell selection
+- **Added:** Instructional banner explaining how to delete/duplicate rows
+- **Removed:** "Delete Last Row" button - Replaced with row selection workflow
+- **Changed:** Row deletion now requires selecting the row first (more intentional)
+
+#### Excel-like Features
+- **Added:** Row selection by clicking row numbers
+- **Added:** Cell range selection with visual feedback
+- **Added:** Clipboard integration for copying cells
+- **Added:** Duplicate row functionality (insert below selected row)
+- **Added:** Selection info display (row number or cell range)
+- **Added:** CopyIcon to icon library
+
+### 🎨 UI/UX Enhancements
+
+- **Added:** Blue selection banner showing selected row/cells
+- **Added:** Context-aware buttons (Delete Row for full row, Copy Cells for partial selection)
+- **Added:** Disabled states for header row (cannot delete/duplicate)
+- **Added:** Toast notifications for all row operations
+- **Added:** Enhanced help text with keyboard shortcuts
+- **Changed:** More intuitive row management workflow
+
+### 🔧 Technical Improvements
+
+- **Added:** `onSelect` handler in Spreadsheet component
+- **Added:** `selected` state tracking in XLSXEditor
+- **Added:** `handleDeleteSelectedRow` - Delete specific row by index
+- **Added:** `handleDuplicateSelection` - Duplicate row or copy cells
+- **Added:** `handleDeleteTemplateRow` - Delete specific row from template
+- **Added:** `handleDuplicateTemplateRow` - Duplicate specific row in template
+- **Added:** `selectedRowInfo` computed value for UI display
+- **Added:** Clipboard API integration for cell copying
+- **Changed:** Row deletion now works on any selected row, not just last
+
+### 📊 Impact
+
+- ✅ Users can now delete ANY row by selecting it first
+- ✅ Excel-like row selection and duplication
+- ✅ Multi-cell selection and clipboard copying
+- ✅ More intuitive and powerful spreadsheet editing
+- ✅ Better visual feedback for selections
+- ✅ More intentional row deletion (prevents accidental deletes)
+- ✅ Clear instructions for new users
+- ✅ Bundle size: 603.80 kB (+3.27 kB from v2.3.0)
+
+---
+
 ## [2.3.0] - 2025-11-16 - Row Management, Title Update & Tabbed Data Editing
 
 ### 🎯 Major Features

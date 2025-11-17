@@ -286,6 +286,37 @@ const App: React.FC = () => {
     setTemplateData(newData);
   }, []);
 
+  // Delete specific row from template data
+  const handleDeleteTemplateRow = useCallback((rowIndex: number) => {
+    if (templateData.length === 0 || rowIndex === 0) return; // Don't delete header
+
+    const updatedData = templateData.filter((_, index) => index !== rowIndex);
+    setTemplateData(updatedData);
+  }, [templateData]);
+
+  // Duplicate specific row in template data
+  const handleDuplicateTemplateRow = useCallback((rowIndex: number) => {
+    console.log('handleDuplicateTemplateRow called with rowIndex:', rowIndex);
+    console.log('templateData before:', templateData);
+
+    if (templateData.length === 0 || rowIndex === 0) {
+      console.log('Skipping duplicate - header row or empty data');
+      return; // Don't duplicate header
+    }
+
+    const rowToDuplicate = [...templateData[rowIndex]];
+    console.log('Row to duplicate:', rowToDuplicate);
+
+    const updatedData = [
+      ...templateData.slice(0, rowIndex + 1),
+      rowToDuplicate,
+      ...templateData.slice(rowIndex + 1)
+    ];
+
+    console.log('templateData after:', updatedData);
+    setTemplateData(updatedData);
+  }, [templateData]);
+
   // Handle Facebook post edits - update template data
   const handleFacebookSaveToTemplateData = useCallback((rowIndex: number, updatedRow: any[]) => {
     const newTemplateData = [...templateData];
@@ -751,15 +782,6 @@ const App: React.FC = () => {
                           <PlusIcon className="h-4 w-4" />
                           <span>Add Row</span>
                         </button>
-                        <button
-                          onClick={handleDeleteTemplateLastRow}
-                          disabled={templateData.length <= 1}
-                          className={`${getButtonClasses({ variant: 'danger', size: 'md', disabled: templateData.length <= 1 })} flex items-center gap-2`}
-                          title="Delete the last row from the template (cannot delete header)"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                          <span>Delete Last Row</span>
-                        </button>
                         <div className="flex-1"></div>
                         <div className="text-sm text-slate-600 dark:text-slate-400 flex items-center">
                           <span className="font-medium">{Math.max(0, templateData.length - 1)}</span>
@@ -767,11 +789,20 @@ const App: React.FC = () => {
                         </div>
                       </div>
 
+                      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <p className="text-sm text-blue-800 dark:text-blue-200">
+                          💡 <strong>Two ways to manage rows:</strong> (1) Hover over any row number and click the ⋮ menu for quick duplicate/delete actions, or
+                          (2) Select any cells in a row and use the "Delete Row" or "Duplicate Row" buttons that appear above the spreadsheet.
+                        </p>
+                      </div>
+
                       <XLSXEditor
                         headers={templateHeaders}
                         initialData={templateData}
                         filename={templateFile?.name.replace(/\.xlsx$/i, '_edited.xlsx') || 'edited_template.xlsx'}
                         onDataChange={handleTemplateDataChange}
+                        onDeleteRow={handleDeleteTemplateRow}
+                        onDuplicateRow={handleDuplicateTemplateRow}
                       />
                     </div>
                   )}
