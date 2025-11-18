@@ -10,6 +10,7 @@ export interface OCRResult {
 export interface ImageData {
   mimeType: string;
   data: string; // base64
+  processedDataUrl?: string; // preprocessed image data URL
 }
 
 /**
@@ -52,6 +53,17 @@ export class TesseractOCRService {
             }
           }
         });
+
+        // Configure Tesseract for better accuracy
+        // PSM 3 = Fully automatic page segmentation (best for mixed content)
+        // OEM 1 = Neural nets LSTM engine only (best accuracy)
+        await this.worker.setParameters({
+          tessedit_pageseg_mode: '3',  // Fully automatic page segmentation
+          tessedit_ocr_engine_mode: '1', // LSTM neural net (best accuracy)
+          tessedit_char_whitelist: '', // Allow all characters
+          preserve_interword_spaces: '1', // Preserve spaces between words
+        });
+
         this.isInitialized = true;
       } catch (error) {
         console.error('Failed to initialize Tesseract:', error);
@@ -183,10 +195,10 @@ export class TesseractOCRService {
         };
       }
 
-      // Use image data directly (HEIC conversion handled before this)
-      const imageUrl = `data:${image.mimeType};base64,${image.data}`;
+      // Use preprocessed image if available (better accuracy), otherwise use original
+      const imageUrl = image.processedDataUrl || `data:${image.mimeType};base64,${image.data}`;
 
-      // Perform OCR
+      // Perform OCR with optimized settings
       console.log('Starting OCR recognition...');
       const { data: { text } } = await this.worker.recognize(imageUrl);
       console.log('OCR completed. Extracted text length:', text?.length || 0);

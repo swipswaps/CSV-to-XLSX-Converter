@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import toast from 'react-hot-toast';
 import heic2any from 'heic2any';
 import { UploadIcon } from './Icons';
@@ -25,25 +26,26 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
   // Helper function to add progress logs
   const addLog = useCallback((type: 'info' | 'success' | 'error' | 'warning', message: string) => {
     const timestamp = new Date().toLocaleTimeString();
-    setProgressLogs(prev => [...prev, { timestamp, type, message }]);
     console.log(`[${timestamp}] [${type.toUpperCase()}] ${message}`);
 
-    // Force React to flush state updates immediately for real-time progress
-    // This ensures the UI updates during async operations
-    return new Promise(resolve => setTimeout(resolve, 0));
+    // Use flushSync to force immediate synchronous DOM update
+    // This ensures the UI updates in real-time during async operations
+    flushSync(() => {
+      setProgressLogs(prev => [...prev, { timestamp, type, message }]);
+    });
   }, []);
 
   useEffect(() => {
     const init = async () => {
       setIsInitializing(true);
-      await addLog('info', 'Initializing OCR engine...');
+      addLog('info', 'Initializing OCR engine...');
       try {
         await tesseractService.initialize();
         setIsReady(true);
-        await addLog('success', 'OCR engine ready! No API key needed - works offline!');
+        addLog('success', 'OCR engine ready! No API key needed - works offline!');
         toast.success('✅ OCR engine ready! No API key needed - works offline!', { duration: 3000 });
       } catch (error) {
-        await addLog('error', 'Failed to initialize OCR engine. Please refresh the page.');
+        addLog('error', 'Failed to initialize OCR engine. Please refresh the page.');
         toast.error('Failed to initialize OCR engine. Please refresh the page.');
       } finally {
         setIsInitializing(false);
@@ -115,7 +117,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
    */
   const convertHeicToJpeg = async (file: File): Promise<File> => {
     try {
-      await addLog('info', `🔄 Converting HEIC file: ${file.name}`);
+      addLog('info', `🔄 Converting HEIC file: ${file.name}`);
       console.log(`Converting HEIC file: ${file.name}`);
 
       // Convert HEIC to JPEG blob
@@ -135,11 +137,11 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
         { type: 'image/jpeg' }
       );
 
-      await addLog('success', `✅ HEIC conversion successful: ${file.name} → ${convertedFile.name}`);
+      addLog('success', `✅ HEIC conversion successful: ${file.name} → ${convertedFile.name}`);
       console.log(`✅ HEIC conversion successful: ${file.name} -> ${convertedFile.name}`);
       return convertedFile;
     } catch (error) {
-      await addLog('error', `❌ HEIC conversion failed: ${file.name}`);
+      addLog('error', `❌ HEIC conversion failed: ${file.name}`);
       console.error('HEIC conversion failed:', error);
       throw new Error(`Failed to convert HEIC file: ${file.name}`);
     }
@@ -182,8 +184,8 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
               // Grayscale conversion (weighted average)
               const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
 
-              // Increase contrast (simple contrast stretch)
-              const contrast = 1.5; // Contrast multiplier
+              // Increase contrast more aggressively for better OCR
+              const contrast = 2.0; // Increased from 1.5 to 2.0
               const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
               const adjusted = factor * (gray - 128) + 128;
               const clamped = Math.max(0, Math.min(255, adjusted));
@@ -216,26 +218,37 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
               }
             }
 
-            // Step 3: Binarization (Otsu-like threshold)
-            // Calculate histogram
-            const histogram = new Array(256).fill(0);
-            for (let i = 0; i < data.length; i += 4) {
-              histogram[data[i]]++;
-            }
+            // Step 3: Adaptive Binarization (better than global threshold)
+            // Use local adaptive thresholding for better results with varying lighting
+            const blockSize = 15; // Size of local neighborhood
+            const C = 10; // Constant subtracted from mean
 
-            // Find threshold using simple method (mean-based)
-            let sum = 0;
-            let count = 0;
-            for (let i = 0; i < 256; i++) {
-              sum += i * histogram[i];
-              count += histogram[i];
-            }
-            const threshold = sum / count;
+            const tempData2 = new Uint8ClampedArray(data);
 
-            // Apply threshold
-            for (let i = 0; i < data.length; i += 4) {
-              const value = data[i] > threshold ? 255 : 0;
-              data[i] = data[i + 1] = data[i + 2] = value;
+            for (let y = 0; y < height; y++) {
+              for (let x = 0; x < width; x++) {
+                // Calculate local mean in neighborhood
+                let sum = 0;
+                let count = 0;
+                const halfBlock = Math.floor(blockSize / 2);
+
+                for (let dy = -halfBlock; dy <= halfBlock; dy++) {
+                  for (let dx = -halfBlock; dx <= halfBlock; dx++) {
+                    const ny = Math.max(0, Math.min(height - 1, y + dy));
+                    const nx = Math.max(0, Math.min(width - 1, x + dx));
+                    const idx = (ny * width + nx) * 4;
+                    sum += tempData2[idx];
+                    count++;
+                  }
+                }
+
+                const localMean = sum / count;
+                const threshold = localMean - C;
+
+                const idx = (y * width + x) * 4;
+                const value = tempData2[idx] > threshold ? 255 : 0;
+                data[idx] = data[idx + 1] = data[idx + 2] = value;
+              }
             }
 
             // Put processed image data back
@@ -301,7 +314,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
     setProcessedImages({});
 
     setProcessing(true);
-    await addLog('info', `🚀 Starting OCR processing for ${files.length} file(s)...`);
+    addLog('info', `🚀 Starting OCR processing for ${files.length} file(s)...`);
 
     const allData: any[][] = [];
     const allText: string[] = [];
@@ -313,14 +326,14 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
       const file = files[i];
       try {
         setFileStatuses(prev => ({ ...prev, [file.name]: 'processing' }));
-        await addLog('info', `📄 [${i + 1}/${files.length}] Processing: ${file.name}`);
+        addLog('info', `📄 [${i + 1}/${files.length}] Processing: ${file.name}`);
         toast.loading(`Processing ${file.name}...`, { id: file.name });
 
         // Step 1: File reading and preprocessing
-        await addLog('info', `📖 Reading file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+        addLog('info', `📖 Reading file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
         const base64Image = await fileToBase64(file);
-        await addLog('success', `✅ File read and preprocessed: ${file.name}`);
-        await addLog('info', `🎨 Applied: grayscale → contrast → sharpen → binarize`);
+        addLog('success', `✅ File read and preprocessed: ${file.name}`);
+        addLog('info', `🎨 Applied: grayscale → contrast → sharpen → binarize`);
 
         // Store processed image for display
         if (base64Image.processedDataUrl) {
@@ -328,7 +341,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
         }
 
         // Step 2: OCR extraction
-        await addLog('info', `🔍 Running OCR on: ${file.name}`);
+        addLog('info', `🔍 Running OCR on: ${file.name}`);
         const result = await tesseractService.extractDataFromImage(base64Image);
 
         if (!result.success) {
@@ -338,7 +351,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
         const data = result.data || [];
         const rawText = result.rawText || '';
 
-        await addLog('success', `✅ OCR complete: ${file.name} - Extracted ${rawText.length} characters`);
+        addLog('success', `✅ OCR complete: ${file.name} - Extracted ${rawText.length} characters`);
 
         if (rawText) {
           allText.push(`\n========== ${file.name} ==========\n${rawText}\n`);
@@ -351,18 +364,18 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
           allData.push([headers, ...rows]);
 
           setFileStatuses(prev => ({ ...prev, [file.name]: 'success' }));
-          await addLog('success', `✅ Extracted ${data.length} rows from ${file.name}`);
+          addLog('success', `✅ Extracted ${data.length} rows from ${file.name}`);
           toast.success(`✅ Extracted ${data.length} rows from ${file.name}`, { id: file.name });
           successCount++;
         } else {
           setFileStatuses(prev => ({ ...prev, [file.name]: 'success' }));
-          await addLog('warning', `⚠️ No structured data found in ${file.name} (text extracted but not parseable)`);
+          addLog('warning', `⚠️ No structured data found in ${file.name} (text extracted but not parseable)`);
           toast('⚠️ No data found in ' + file.name, { id: file.name, icon: '⚠️' });
         }
       } catch (err: any) {
         setFileStatuses(prev => ({ ...prev, [file.name]: 'error' }));
         const errorMsg = err.message || 'Unknown error';
-        await addLog('error', `❌ ${file.name}: ${errorMsg}`);
+        addLog('error', `❌ ${file.name}: ${errorMsg}`);
         toast.error(`❌ ${file.name}: ${errorMsg}`, { id: file.name, duration: 5000 });
         errorCount++;
       }
@@ -375,17 +388,17 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
       setExtractedText(allText.join('\n'));
       setShowResults(true);
       setProcessedImages(processedImgs);
-      await addLog('success', `📝 All extracted text saved to Results tab`);
+      addLog('success', `📝 All extracted text saved to Results tab`);
     }
 
     if (allData.length > 0) {
       // Merge all data - combine all rows with same headers
       const mergedData = allData.flat();
       onDataExtracted(mergedData);
-      await addLog('success', `🎉 OCR complete! ${successCount} file(s) processed successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
+      addLog('success', `🎉 OCR complete! ${successCount} file(s) processed successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
       toast.success(`🎉 OCR complete! ${successCount} file(s) processed successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`, { duration: 4000 });
     } else if (errorCount > 0) {
-      await addLog('error', `❌ Failed to extract data from ${errorCount} file(s)`);
+      addLog('error', `❌ Failed to extract data from ${errorCount} file(s)`);
       toast.error(`Failed to extract data from ${errorCount} file(s)`, { duration: 4000 });
     }
   };
