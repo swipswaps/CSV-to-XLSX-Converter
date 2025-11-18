@@ -16,16 +16,29 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
   const [fileStatuses, setFileStatuses] = useState<Record<string, 'pending' | 'processing' | 'success' | 'error'>>({});
   const [isInitializing, setIsInitializing] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [progressLogs, setProgressLogs] = useState<Array<{ timestamp: string; type: 'info' | 'success' | 'error' | 'warning'; message: string }>>([]);
+  const [extractedText, setExtractedText] = useState<string>('');
+  const [showResults, setShowResults] = useState(false);
 
   // Initialize Tesseract on component mount
+  // Helper function to add progress logs
+  const addLog = useCallback((type: 'info' | 'success' | 'error' | 'warning', message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setProgressLogs(prev => [...prev, { timestamp, type, message }]);
+    console.log(`[${timestamp}] [${type.toUpperCase()}] ${message}`);
+  }, []);
+
   useEffect(() => {
     const init = async () => {
       setIsInitializing(true);
+      addLog('info', 'Initializing OCR engine...');
       try {
         await tesseractService.initialize();
         setIsReady(true);
+        addLog('success', 'OCR engine ready! No API key needed - works offline!');
         toast.success('✅ OCR engine ready! No API key needed - works offline!', { duration: 3000 });
       } catch (error) {
+        addLog('error', 'Failed to initialize OCR engine. Please refresh the page.');
         toast.error('Failed to initialize OCR engine. Please refresh the page.');
       } finally {
         setIsInitializing(false);
@@ -37,7 +50,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
     return () => {
       tesseractService.terminate();
     };
-  }, []);
+  }, [addLog]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -97,6 +110,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
    */
   const convertHeicToJpeg = async (file: File): Promise<File> => {
     try {
+      addLog('info', `🔄 Converting HEIC file: ${file.name}`);
       console.log(`Converting HEIC file: ${file.name}`);
 
       // Convert HEIC to JPEG blob
@@ -116,9 +130,11 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
         { type: 'image/jpeg' }
       );
 
+      addLog('success', `✅ HEIC conversion successful: ${file.name} → ${convertedFile.name}`);
       console.log(`✅ HEIC conversion successful: ${file.name} -> ${convertedFile.name}`);
       return convertedFile;
     } catch (error) {
+      addLog('error', `❌ HEIC conversion failed: ${file.name}`);
       console.error('HEIC conversion failed:', error);
       throw new Error(`Failed to convert HEIC file: ${file.name}`);
     }
@@ -149,15 +165,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
     });
   };
 
-  const extractDataFromImage = async (image: { mimeType: string; data: string }): Promise<any[]> => {
-    const result = await tesseractService.extractDataFromImage(image);
 
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to extract data');
-    }
-
-    return result.data || [];
-  };
 
   const handleProcess = async () => {
     if (files.length === 0) {
@@ -170,18 +178,47 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
       return;
     }
 
+    // Clear previous logs and results
+    setProgressLogs([]);
+    setExtractedText('');
+    setShowResults(false);
+
     setProcessing(true);
+    addLog('info', `🚀 Starting OCR processing for ${files.length} file(s)...`);
+
     const allData: any[][] = [];
+    const allText: string[] = [];
     let successCount = 0;
     let errorCount = 0;
 
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       try {
         setFileStatuses(prev => ({ ...prev, [file.name]: 'processing' }));
+        addLog('info', `📄 [${i + 1}/${files.length}] Processing: ${file.name}`);
         toast.loading(`Processing ${file.name}...`, { id: file.name });
 
+        // Step 1: File reading
+        addLog('info', `📖 Reading file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
         const base64Image = await fileToBase64(file);
-        const data = await extractDataFromImage(base64Image);
+        addLog('success', `✅ File read complete: ${file.name}`);
+
+        // Step 2: OCR extraction
+        addLog('info', `🔍 Running OCR on: ${file.name}`);
+        const result = await tesseractService.extractDataFromImage(base64Image);
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to extract data');
+        }
+
+        const data = result.data || [];
+        const rawText = result.rawText || '';
+
+        addLog('success', `✅ OCR complete: ${file.name} - Extracted ${rawText.length} characters`);
+
+        if (rawText) {
+          allText.push(`\n========== ${file.name} ==========\n${rawText}\n`);
+        }
 
         if (data && data.length > 0) {
           // Convert JSON objects to array format
@@ -190,15 +227,18 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
           allData.push([headers, ...rows]);
 
           setFileStatuses(prev => ({ ...prev, [file.name]: 'success' }));
+          addLog('success', `✅ Extracted ${data.length} rows from ${file.name}`);
           toast.success(`✅ Extracted ${data.length} rows from ${file.name}`, { id: file.name });
           successCount++;
         } else {
           setFileStatuses(prev => ({ ...prev, [file.name]: 'success' }));
+          addLog('warning', `⚠️ No structured data found in ${file.name} (text extracted but not parseable)`);
           toast('⚠️ No data found in ' + file.name, { id: file.name, icon: '⚠️' });
         }
       } catch (err: any) {
         setFileStatuses(prev => ({ ...prev, [file.name]: 'error' }));
         const errorMsg = err.message || 'Unknown error';
+        addLog('error', `❌ ${file.name}: ${errorMsg}`);
         toast.error(`❌ ${file.name}: ${errorMsg}`, { id: file.name, duration: 5000 });
         errorCount++;
       }
@@ -206,12 +246,21 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
 
     setProcessing(false);
 
+    // Save all extracted text
+    if (allText.length > 0) {
+      setExtractedText(allText.join('\n'));
+      setShowResults(true);
+      addLog('success', `📝 All extracted text saved to Results tab`);
+    }
+
     if (allData.length > 0) {
       // Merge all data - combine all rows with same headers
       const mergedData = allData.flat();
       onDataExtracted(mergedData);
+      addLog('success', `🎉 OCR complete! ${successCount} file(s) processed successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
       toast.success(`🎉 OCR complete! ${successCount} file(s) processed successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`, { duration: 4000 });
     } else if (errorCount > 0) {
+      addLog('error', `❌ Failed to extract data from ${errorCount} file(s)`);
       toast.error(`Failed to extract data from ${errorCount} file(s)`, { duration: 4000 });
     }
   };
@@ -334,6 +383,78 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
           </div>
         )}
       </div>
+
+      {/* Progress Log Display */}
+      {progressLogs.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+            <span>📊 Processing Log</span>
+            {processing && (
+              <div className="w-5 h-5 rounded-full animate-spin border-2 border-dashed border-blue-600 border-t-transparent"></div>
+            )}
+          </h3>
+          <div className="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 max-h-96 overflow-y-auto font-mono text-sm">
+            {progressLogs.map((log, index) => (
+              <div
+                key={index}
+                className={`py-1 ${
+                  log.type === 'error' ? 'text-red-400' :
+                  log.type === 'success' ? 'text-green-400' :
+                  log.type === 'warning' ? 'text-yellow-400' :
+                  'text-slate-300'
+                }`}
+              >
+                <span className="text-slate-500">[{log.timestamp}]</span>{' '}
+                <span className={`font-semibold ${
+                  log.type === 'error' ? 'text-red-500' :
+                  log.type === 'success' ? 'text-green-500' :
+                  log.type === 'warning' ? 'text-yellow-500' :
+                  'text-blue-500'
+                }`}>
+                  [{log.type.toUpperCase()}]
+                </span>{' '}
+                {log.message}
+              </div>
+            ))}
+            {processing && (
+              <div className="py-1 text-blue-400 animate-pulse">
+                <span className="text-slate-500">[{new Date().toLocaleTimeString()}]</span>{' '}
+                <span className="font-semibold text-blue-500">[INFO]</span>{' '}
+                Processing in progress...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Extracted Text Results */}
+      {showResults && extractedText && (
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+              📝 Extracted Text Results
+            </h3>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(extractedText);
+                toast.success('Copied to clipboard!');
+              }}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              📋 Copy All Text
+            </button>
+          </div>
+          <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4 max-h-96 overflow-y-auto">
+            <pre className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200 font-mono">
+              {extractedText}
+            </pre>
+          </div>
+          <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
+            💡 <strong>Tip:</strong> This is the raw text extracted from your images.
+            If structured data was detected, it's also available in the other editor tabs.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

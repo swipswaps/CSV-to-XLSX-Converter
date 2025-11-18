@@ -103,8 +103,14 @@ The OCR feature works completely offline using **Tesseract.js**:
 
 3. **Extract Data**
    - Click "🚀 Extract Data from X File(s)"
+   - Watch the **real-time progress log** showing each processing step
    - OCR processes each image and extracts text
    - Text is automatically parsed into structured data
+
+4. **View Results**
+   - **Progress Log** - See detailed processing steps with timestamps
+   - **Extracted Text Results** - View and copy all raw OCR output
+   - **Editor Tabs** - Access structured data in XLSX, CSV, JSON, SQL formats
 
 4. **Review & Edit**
    - Extracted data appears in the spreadsheet editor

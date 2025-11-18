@@ -1,5 +1,117 @@
 # Changelog
 
+## [2.5.1] - 2025-01-18 - OCR UX Improvements: Progress Logging + Results Display
+
+### 🎯 Major UX Enhancements
+
+**Real-Time Progress Logging:**
+- Added live processing log display with timestamps
+- Shows detailed step-by-step progress during OCR processing
+- Color-coded log levels: INFO (blue), SUCCESS (green), WARNING (yellow), ERROR (red)
+- Console-style terminal display with dark background
+- Logs persist after processing for debugging
+- Animated "Processing in progress..." indicator
+
+**Extracted Text Results Tab:**
+- New dedicated section to display all extracted text
+- Shows raw OCR output from all processed images
+- Organized by filename with clear separators
+- Copy-to-clipboard button for easy text export
+- Scrollable text area with monospace font
+- Helpful tip explaining relationship to structured data
+
+**Detailed Progress Messages:**
+- File reading progress with file size display
+- HEIC conversion status with before/after filenames
+- OCR processing status with character count
+- Structured data parsing results
+- Success/error counts and summaries
+- Step numbers (e.g., "[1/3] Processing...")
+
+### 🔧 Technical Improvements
+
+**State Management:**
+- Added `progressLogs` state for log entries
+- Added `extractedText` state for raw OCR output
+- Added `showResults` state to control results display
+- Added `addLog()` helper function for consistent logging
+
+**Enhanced Error Visibility:**
+- All errors now logged to progress display
+- HEIC conversion errors clearly shown
+- OCR failures with specific error messages
+- File reading errors with context
+
+**Better User Feedback:**
+- No more "hanging" during processing
+- Clear indication of what's happening at each step
+- File size information helps set expectations
+- Character count shows extraction progress
+- Toast notifications + progress log for redundancy
+
+### 📊 Progress Log Features
+
+**Log Entry Structure:**
+- Timestamp (HH:MM:SS format)
+- Log level (INFO, SUCCESS, WARNING, ERROR)
+- Descriptive message with emojis for visual clarity
+
+**Log Events Tracked:**
+- OCR engine initialization
+- File selection and reading
+- HEIC conversion start/complete
+- OCR processing start/complete
+- Data extraction results
+- Error conditions
+- Final summary
+
+### 📝 Results Display Features
+
+**Text Organization:**
+- Filename headers with separator lines
+- Preserves original text formatting
+- Monospace font for alignment
+- Dark/light mode support
+- Scrollable container (max 96 height)
+
+**User Actions:**
+- Copy all extracted text to clipboard
+- View raw OCR output alongside structured data
+- Understand what was extracted vs. what was parsed
+
+### 🎨 UI/UX Polish
+
+**Visual Indicators:**
+- Spinning loader icon in log header during processing
+- Color-coded log messages for quick scanning
+- Pulsing "Processing in progress..." message
+- Clean card-based layout
+- Consistent spacing and typography
+
+**Accessibility:**
+- High contrast colors for readability
+- Clear visual hierarchy
+- Descriptive labels and headings
+- Keyboard-accessible copy button
+
+### 📦 Bundle Size
+
+- **Size:** 1,993.63 kB (slight increase from 1,989.75 kB)
+- **Gzip:** 533.85 kB (slight increase from 532.93 kB)
+- **Build Time:** 5.18s
+- **Status:** ✅ PASSING
+
+### 🐛 Fixes
+
+- **Issue:** Users left wondering if app stalled during processing
+  - **Solution:** Real-time progress log shows exactly what's happening
+- **Issue:** No way to view extracted text after processing
+  - **Solution:** New results tab displays all raw OCR output
+- **Issue:** HEIC conversion happens silently
+  - **Solution:** Progress log shows conversion status with filenames
+
+---
+
 ## [2.5.0] - 2025-11-17 - Offline OCR + Row Management Fixes
 
 ### 🎯 Major Features
