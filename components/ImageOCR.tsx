@@ -19,6 +19,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
   const [progressLogs, setProgressLogs] = useState<Array<{ timestamp: string; type: 'info' | 'success' | 'error' | 'warning'; message: string }>>([]);
   const [extractedText, setExtractedText] = useState<string>('');
   const [showResults, setShowResults] = useState(false);
+  const [processedImages, setProcessedImages] = useState<Record<string, string>>({});
 
   // Initialize Tesseract on component mount
   // Helper function to add progress logs
@@ -140,7 +141,118 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
     }
   };
 
-  const fileToBase64 = async (file: File): Promise<{ mimeType: string; data: string }> => {
+  /**
+   * Preprocess image for better OCR accuracy
+   * - Convert to grayscale
+   * - Increase contrast
+   * - Sharpen
+   * - Binarize (black & white)
+   */
+  const preprocessImage = async (file: File): Promise<{ processedDataUrl: string; originalDataUrl: string }> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        const originalDataUrl = e.target?.result as string;
+        img.onload = () => {
+          try {
+            // Create canvas for processing
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Could not get canvas context');
+
+            // Set canvas size to image size (maintain resolution)
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            // Draw original image
+            ctx.drawImage(img, 0, 0);
+
+            // Get image data
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Step 1: Convert to grayscale and increase contrast
+            for (let i = 0; i < data.length; i += 4) {
+              // Grayscale conversion (weighted average)
+              const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+
+              // Increase contrast (simple contrast stretch)
+              const contrast = 1.5; // Contrast multiplier
+              const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+              const adjusted = factor * (gray - 128) + 128;
+              const clamped = Math.max(0, Math.min(255, adjusted));
+
+              data[i] = data[i + 1] = data[i + 2] = clamped;
+            }
+
+            // Step 2: Apply sharpening kernel
+            const sharpenKernel = [
+              0, -1, 0,
+              -1, 5, -1,
+              0, -1, 0
+            ];
+            const tempData = new Uint8ClampedArray(data);
+            const width = canvas.width;
+            const height = canvas.height;
+
+            for (let y = 1; y < height - 1; y++) {
+              for (let x = 1; x < width - 1; x++) {
+                let sum = 0;
+                for (let ky = -1; ky <= 1; ky++) {
+                  for (let kx = -1; kx <= 1; kx++) {
+                    const idx = ((y + ky) * width + (x + kx)) * 4;
+                    const kernelIdx = (ky + 1) * 3 + (kx + 1);
+                    sum += tempData[idx] * sharpenKernel[kernelIdx];
+                  }
+                }
+                const idx = (y * width + x) * 4;
+                data[idx] = data[idx + 1] = data[idx + 2] = Math.max(0, Math.min(255, sum));
+              }
+            }
+
+            // Step 3: Binarization (Otsu-like threshold)
+            // Calculate histogram
+            const histogram = new Array(256).fill(0);
+            for (let i = 0; i < data.length; i += 4) {
+              histogram[data[i]]++;
+            }
+
+            // Find threshold using simple method (mean-based)
+            let sum = 0;
+            let count = 0;
+            for (let i = 0; i < 256; i++) {
+              sum += i * histogram[i];
+              count += histogram[i];
+            }
+            const threshold = sum / count;
+
+            // Apply threshold
+            for (let i = 0; i < data.length; i += 4) {
+              const value = data[i] > threshold ? 255 : 0;
+              data[i] = data[i + 1] = data[i + 2] = value;
+            }
+
+            // Put processed image data back
+            ctx.putImageData(imageData, 0, 0);
+
+            // Convert to data URL
+            const processedDataUrl = canvas.toDataURL('image/png');
+            resolve({ processedDataUrl, originalDataUrl });
+          } catch (error) {
+            reject(error);
+          }
+        };
+        img.onerror = reject;
+        img.src = originalDataUrl;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const fileToBase64 = async (file: File): Promise<{ mimeType: string; data: string; processedDataUrl?: string; originalDataUrl?: string }> => {
     // Check if file is HEIC/HEIF and convert it first
     let processFile = file;
 
@@ -153,16 +265,16 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
       }
     }
 
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64Data = result.split(',')[1];
-        resolve({ mimeType: processFile.type, data: base64Data });
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(processFile);
-    });
+    // Preprocess image for better OCR
+    const { processedDataUrl, originalDataUrl } = await preprocessImage(processFile);
+    const base64Data = processedDataUrl.split(',')[1];
+
+    return {
+      mimeType: 'image/png',
+      data: base64Data,
+      processedDataUrl,
+      originalDataUrl
+    };
   };
 
 
@@ -182,12 +294,14 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
     setProgressLogs([]);
     setExtractedText('');
     setShowResults(false);
+    setProcessedImages({});
 
     setProcessing(true);
     addLog('info', `🚀 Starting OCR processing for ${files.length} file(s)...`);
 
     const allData: any[][] = [];
     const allText: string[] = [];
+    const processedImgs: Record<string, string> = {};
     let successCount = 0;
     let errorCount = 0;
 
@@ -198,10 +312,16 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
         addLog('info', `📄 [${i + 1}/${files.length}] Processing: ${file.name}`);
         toast.loading(`Processing ${file.name}...`, { id: file.name });
 
-        // Step 1: File reading
+        // Step 1: File reading and preprocessing
         addLog('info', `📖 Reading file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
         const base64Image = await fileToBase64(file);
-        addLog('success', `✅ File read complete: ${file.name}`);
+        addLog('success', `✅ File read and preprocessed: ${file.name}`);
+        addLog('info', `🎨 Applied: grayscale → contrast → sharpen → binarize`);
+
+        // Store processed image for display
+        if (base64Image.processedDataUrl) {
+          processedImgs[file.name] = base64Image.processedDataUrl;
+        }
 
         // Step 2: OCR extraction
         addLog('info', `🔍 Running OCR on: ${file.name}`);
@@ -246,10 +366,11 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
 
     setProcessing(false);
 
-    // Save all extracted text
+    // Save all extracted text and processed images
     if (allText.length > 0) {
       setExtractedText(allText.join('\n'));
       setShowResults(true);
+      setProcessedImages(processedImgs);
       addLog('success', `📝 All extracted text saved to Results tab`);
     }
 
@@ -370,14 +491,14 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
 
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <p className="text-sm text-blue-800 dark:text-blue-200 font-semibold mb-2">
-                💡 Tips for Best Results:
+                💡 Advanced OCR Features:
               </p>
               <ul className="text-sm text-blue-700 dark:text-blue-300 list-disc list-inside space-y-1">
                 <li><strong>HEIC supported!</strong> - Automatically converts Apple HEIC photos to JPEG</li>
-                <li><strong>High resolution</strong> - Clear, readable text works best</li>
+                <li><strong>Image preprocessing!</strong> - Auto-enhances images (grayscale, contrast, sharpen, binarize)</li>
+                <li><strong>High resolution</strong> - Clear, readable text works best (300+ DPI recommended)</li>
                 <li><strong>Good lighting</strong> - High contrast between text and background</li>
                 <li><strong>Straight images</strong> - Avoid blurry or skewed photos</li>
-                <li><strong>Clean backgrounds</strong> - Minimal noise or watermarks</li>
               </ul>
             </div>
           </div>
@@ -393,23 +514,23 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
               <div className="w-5 h-5 rounded-full animate-spin border-2 border-dashed border-blue-600 border-t-transparent"></div>
             )}
           </h3>
-          <div className="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 max-h-96 overflow-y-auto font-mono text-sm">
+          <div className="bg-slate-900 dark:bg-black rounded-lg p-4 max-h-96 overflow-y-auto font-mono text-sm">
             {progressLogs.map((log, index) => (
               <div
                 key={index}
                 className={`py-1 ${
+                  log.type === 'error' ? 'text-red-300' :
+                  log.type === 'success' ? 'text-green-300' :
+                  log.type === 'warning' ? 'text-yellow-300' :
+                  'text-blue-200'
+                }`}
+              >
+                <span className="text-gray-400">[{log.timestamp}]</span>{' '}
+                <span className={`font-bold ${
                   log.type === 'error' ? 'text-red-400' :
                   log.type === 'success' ? 'text-green-400' :
                   log.type === 'warning' ? 'text-yellow-400' :
-                  'text-slate-300'
-                }`}
-              >
-                <span className="text-slate-500">[{log.timestamp}]</span>{' '}
-                <span className={`font-semibold ${
-                  log.type === 'error' ? 'text-red-500' :
-                  log.type === 'success' ? 'text-green-500' :
-                  log.type === 'warning' ? 'text-yellow-500' :
-                  'text-blue-500'
+                  'text-cyan-400'
                 }`}>
                   [{log.type.toUpperCase()}]
                 </span>{' '}
@@ -424,6 +545,34 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Processed Images Display */}
+      {showResults && Object.keys(processedImages).length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+            🖼️ Preprocessed Images (Enhanced for OCR)
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.entries(processedImages).map(([filename, dataUrl]) => (
+              <div key={filename} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{filename}</p>
+                <img
+                  src={dataUrl}
+                  alt={`Processed ${filename}`}
+                  className="w-full h-auto rounded border border-slate-300 dark:border-slate-600"
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                  Applied: Grayscale → Contrast → Sharpen → Binarize
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
+            💡 <strong>Tip:</strong> These preprocessed images show how the OCR engine sees your images.
+            Black text on white background provides the best accuracy.
+          </p>
         </div>
       )}
 
