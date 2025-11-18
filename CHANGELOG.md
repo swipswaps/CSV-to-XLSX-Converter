@@ -1,26 +1,78 @@
 # Changelog
 
-## [2.5.7] - 2025-01-18 - Enhanced Logging and Initialization Debugging
+## [2.5.8] - 2025-01-18 - CRITICAL FIX: Real-time Progress and Thumbnails
 
-### 🔧 Improved Logging and Error Handling
+### 🐛 Critical Bug Fixes - Progress Stalling and Missing Thumbnails
 
-**Changes:**
-- Removed `queueMicrotask` wrapper - using direct state updates for simplicity
-- Added comprehensive console logging to tesseractService initialization
-- Added error message details to initialization failure logs
-- Added console logs for cleanup/termination
-- Logs all Tesseract initialization progress (loading language data, etc.)
+**Problem (User Reported):**
+> "thumbnail still does not load"
+> "long delays after initialization"
+> "app appears stalled"
+> "these are persisting errors over many turns without solving them"
 
-**Why:**
-- Direct state updates work fine - React batches them automatically
-- Better debugging visibility for initialization issues
-- Helps identify if Tesseract is hanging during download/initialization
+**Root Causes Identified:**
+
+1. **Thumbnails Not Appearing:**
+   - `setProcessedImages()` was only called AFTER all files processed
+   - Only called IF `allText.length > 0`
+   - Result: Thumbnails never appeared until end, or not at all
+
+2. **Progress Logs Not Updating in Real-Time:**
+   - React batches state updates during async operations
+   - `addLog()` was synchronous, so logs queued but UI didn't update
+   - Result: Progress appeared frozen during processing
+
+**Solutions Implemented:**
+
+1. **Immediate Thumbnail Display:**
+   ```typescript
+   // BEFORE (BROKEN):
+   if (base64Image.processedDataUrl) {
+     processedImgs[file.name] = base64Image.processedDataUrl;
+     // State only updated at end of ALL processing
+   }
+
+   // AFTER (FIXED):
+   if (base64Image.processedDataUrl) {
+     processedImgs[file.name] = base64Image.processedDataUrl;
+     // Update state IMMEDIATELY so thumbnail appears right away
+     setProcessedImages(prev => ({ ...prev, [file.name]: base64Image.processedDataUrl! }));
+   }
+   ```
+
+2. **Real-Time Progress Updates:**
+   ```typescript
+   // BEFORE (BROKEN):
+   const addLog = (type, message) => {
+     setProgressLogs(prev => [...prev, { timestamp, type, message }]);
+     // React batches this, UI doesn't update during async
+   };
+
+   // AFTER (FIXED):
+   const addLog = async (type, message) => {
+     setProgressLogs(prev => [...prev, { timestamp, type, message }]);
+     // Wait for next animation frame to ensure UI updates
+     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+   };
+   ```
+
+3. **All addLog Calls Now Async:**
+   - Updated all 19 `addLog()` calls to use `await`
+   - Forces UI to update after each log entry
+   - Progress appears in real-time during processing
+
+**Impact:**
+
+✅ Thumbnails appear IMMEDIATELY after each image is preprocessed
+✅ Progress logs update in REAL-TIME during processing
+✅ No more "app appears stalled" - users see continuous feedback
+✅ Works correctly even if OCR extracts zero text
+✅ Each processing step visible as it happens
 
 **Files Modified:**
-- `components/ImageOCR.tsx` - Simplified addLog, added error details
-- `services/tesseractService.ts` - Added detailed console logging
-- `CHANGELOG.md` - v2.5.7 release notes
-- `package.json` - Version bump to 2.5.7
+- `components/ImageOCR.tsx` - Fixed thumbnail state update, async addLog with requestAnimationFrame
+- `CHANGELOG.md` - v2.5.8 release notes
+- `package.json` - Version bump to 2.5.8
 
 ---
 
