@@ -1,5 +1,74 @@
 # Changelog
 
+## [2.5.2] - 2025-01-18 - CSS Fix: Critical Styles + React Rendering Timing
+
+### 🐛 CSS Fix - Tailwind CDN + React Compatibility
+
+**Problem:** Tailwind CSS classes not being applied to React-rendered content
+- Body background worked but buttons/cards had default browser styles
+- Tailwind CDN's MutationObserver not detecting React's dynamic rendering
+- Classes present in DOM but styles not applied
+
+**Root Cause:** Timing issue between Tailwind CDN loading and React rendering
+- Tailwind CDN scans DOM on load
+- React renders after Tailwind's initial scan
+- MutationObserver should detect changes but wasn't working reliably
+
+**Solution Implemented:**
+1. **Critical CSS Fallback** - Added explicit CSS rules for core utility classes
+   - Background colors (bg-white, bg-slate-*, bg-indigo-*, bg-blue-*)
+   - Text colors (text-white, text-slate-*, text-indigo-*)
+   - Border radius (rounded-lg, rounded-xl, rounded-t-lg)
+   - Shadows (shadow-md, shadow-2xl)
+   - Borders (border, border-2, border-b-2, border colors)
+   - Padding (p-4, p-6, px-4, py-2, py-3)
+   - Button states (hover, disabled)
+
+2. **React Rendering Delay** - Wait for Tailwind CDN to fully load
+   - Check document.readyState before rendering
+   - Use window.addEventListener('load') for proper timing
+   - 50ms delay to ensure Tailwind's MutationObserver is set up
+
+3. **Important Flag** - Force critical styles with !important
+   - Ensures styles apply even if Tailwind CDN processes later
+   - Prevents browser default styles from showing
+
+### ✅ Verification Results
+
+**Before Fix:**
+- Body background: `rgba(0, 0, 0, 0)` (transparent) ❌
+- Buttons: `rgb(239, 239, 239)` (browser default) ❌
+- Border radius: `0px` (no rounding) ❌
+- Cards: No background, no shadow ❌
+
+**After Fix:**
+- Body background: `rgb(248, 250, 252)` (slate-50) ✅
+- Button (Export): `rgb(255, 255, 255)` (white) ✅
+- Button (Download): `rgb(79, 70, 229)` (indigo-600) ✅
+- Button (Headers): `rgb(226, 232, 240)` (slate-200) ✅
+- Border radius: `8px` (rounded-lg) ✅
+- Cards: White background with shadow ✅
+
+### 📦 Bundle Size
+
+- **HTML:** 3.93 kB (increased from 1.67 kB due to critical CSS)
+- **Gzip:** 1.40 kB (increased from 0.84 kB)
+- **JS Bundle:** 1,993.73 kB (unchanged)
+- **Build Time:** 6.46s
+- **Status:** ✅ PASSING
+
+### 🔧 Technical Details
+
+**Files Modified:**
+- `index.html` - Added critical CSS rules and Tailwind config
+- `index.tsx` - Added React rendering delay for Tailwind compatibility
+
+**CSS Rules Added:** 60+ utility class overrides
+**Approach:** Hybrid (Tailwind CDN + Critical CSS fallback)
+**Compatibility:** Works with React 19.2.0 + Vite 6.4.1
+
+---
+
 ## [2.5.1] - 2025-01-18 - OCR UX Improvements: Progress Logging + Results Display
 
 ### 🎯 Major UX Enhancements
