@@ -54,15 +54,19 @@ export class TesseractOCRService {
         });
         console.log('[TesseractService] Worker created successfully');
 
-        // Configure Tesseract for better accuracy
-        // PSM 3 = Fully automatic page segmentation (best for mixed content)
+        // Configure Tesseract for better accuracy with noisy images
+        // PSM 6 = Assume a single uniform block of text (better for noisy backgrounds)
         // OEM 1 = Neural nets LSTM engine only (best accuracy)
         console.log('[TesseractService] Setting parameters...');
         await this.worker.setParameters({
-          tessedit_pageseg_mode: '3',  // Fully automatic page segmentation
+          tessedit_pageseg_mode: '6',  // Single uniform block of text (better for noisy images)
           tessedit_ocr_engine_mode: '1', // LSTM neural net (best accuracy)
           tessedit_char_whitelist: '', // Allow all characters
           preserve_interword_spaces: '1', // Preserve spaces between words
+          // Additional parameters for better noise handling
+          textord_heavy_nr: '1', // Enable heavy noise reduction
+          textord_noise_rejwords: '1', // Reject words with too much noise
+          textord_noise_rejrows: '1', // Reject rows with too much noise
         });
         console.log('[TesseractService] Parameters set successfully');
 

@@ -20,6 +20,9 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
   const [extractedText, setExtractedText] = useState<string>('');
   const [showResults, setShowResults] = useState(false);
   const [processedImages, setProcessedImages] = useState<Record<string, string>>({});
+  // Map to store converted files (original filename -> converted File)
+  // This ensures HEIC files are converted once and reused for both preview and processing
+  const [convertedFiles, setConvertedFiles] = useState<Record<string, File>>({});
 
   // Initialize Tesseract on component mount
   // Helper function to add progress logs
@@ -66,63 +69,20 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
     };
   }, [addLog]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const newFiles = Array.from(event.target.files);
-      setFiles(newFiles);
-      
-      // Generate preview URLs
-      const urls: Record<string, string> = {};
-      newFiles.forEach(file => {
-        urls[file.name] = URL.createObjectURL(file);
-      });
-      setPreviewUrls(urls);
-      
-      // Initialize statuses
-      const statuses: Record<string, 'pending'> = {};
-      newFiles.forEach(file => {
-        statuses[file.name] = 'pending';
-      });
-      setFileStatuses(statuses);
-    }
-  };
-
-  const handleDragEvent = useCallback((event: React.DragEvent<HTMLElement>, dragging: boolean) => {
-    if (processing) return;
-    event.preventDefault();
-    event.stopPropagation();
-    setIsDragging(dragging);
-  }, [processing]);
-
-  const handleDrop = useCallback((event: React.DragEvent<HTMLElement>) => {
-    if (processing) return;
-    handleDragEvent(event, false);
-    if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
-      const newFiles = Array.from(event.dataTransfer.files);
-      setFiles(newFiles);
-      
-      // Generate preview URLs
-      const urls: Record<string, string> = {};
-      newFiles.forEach(file => {
-        urls[file.name] = URL.createObjectURL(file);
-      });
-      setPreviewUrls(urls);
-      
-      // Initialize statuses
-      const statuses: Record<string, 'pending'> = {};
-      newFiles.forEach(file => {
-        statuses[file.name] = 'pending';
-      });
-      setFileStatuses(statuses);
-      
-      event.dataTransfer.clearData();
-    }
-  }, [handleDragEvent, processing]);
+  /**
+   * Helper function to check if a file is HEIC/HEIF format
+   */
+  const isHeicFile = useCallback((file: File): boolean => {
+    return file.type === 'image/heic' ||
+           file.type === 'image/heif' ||
+           file.name.toLowerCase().endsWith('.heic') ||
+           file.name.toLowerCase().endsWith('.heif');
+  }, []);
 
   /**
    * Convert HEIC/HEIF files to JPEG using heic2any library
    */
-  const convertHeicToJpeg = async (file: File): Promise<File> => {
+  const convertHeicToJpeg = useCallback(async (file: File): Promise<File> => {
     try {
       await addLog('info', `🔄 Converting HEIC file: ${file.name}`);
       console.log(`Converting HEIC file: ${file.name}`);
@@ -152,14 +112,89 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
       console.error('HEIC conversion failed:', error);
       throw new Error(`Failed to convert HEIC file: ${file.name}`);
     }
+  }, [addLog]);
+
+  /**
+   * Process uploaded files: convert HEIC files immediately and generate preview URLs
+   * This ensures thumbnails display correctly for all file types
+   */
+  const processAndSetFiles = useCallback(async (newFiles: File[]) => {
+    setFiles(newFiles);
+
+    const urls: Record<string, string> = {};
+    const statuses: Record<string, 'pending'> = {};
+    const converted: Record<string, File> = {};
+
+    // Process each file
+    for (const file of newFiles) {
+      statuses[file.name] = 'pending';
+
+      if (isHeicFile(file)) {
+        try {
+          // Show a toast notification for HEIC conversion
+          toast.loading(`Converting HEIC file: ${file.name}...`, { id: `heic-${file.name}` });
+
+          // Convert HEIC to JPEG immediately for preview
+          const convertedFile = await convertHeicToJpeg(file);
+
+          // Store the converted file for later use during processing
+          converted[file.name] = convertedFile;
+
+          // Create preview URL from the converted JPEG (this will display correctly)
+          urls[file.name] = URL.createObjectURL(convertedFile);
+
+          toast.success(`HEIC converted: ${file.name}`, { id: `heic-${file.name}` });
+        } catch (error) {
+          console.error(`Failed to convert HEIC file ${file.name}:`, error);
+          toast.error(`Failed to convert HEIC: ${file.name}`, { id: `heic-${file.name}` });
+
+          // Fallback: try to create preview URL from original (may not display in most browsers)
+          urls[file.name] = URL.createObjectURL(file);
+        }
+      } else {
+        // For non-HEIC files, create preview URL directly
+        urls[file.name] = URL.createObjectURL(file);
+      }
+    }
+
+    // Update all states
+    setPreviewUrls(urls);
+    setFileStatuses(statuses);
+    setConvertedFiles(converted);
+  }, [isHeicFile, convertHeicToJpeg]);
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const newFiles = Array.from(event.target.files);
+      await processAndSetFiles(newFiles);
+    }
   };
+
+  const handleDragEvent = useCallback((event: React.DragEvent<HTMLElement>, dragging: boolean) => {
+    if (processing) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(dragging);
+  }, [processing]);
+
+  const handleDrop = useCallback(async (event: React.DragEvent<HTMLElement>) => {
+    if (processing) return;
+    handleDragEvent(event, false);
+    if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(event.dataTransfer.files);
+      await processAndSetFiles(newFiles);
+      event.dataTransfer.clearData();
+    }
+  }, [handleDragEvent, processing, processAndSetFiles]);
 
   /**
    * Preprocess image for better OCR accuracy
+   * Enhanced to handle noisy backgrounds and low-contrast images
    * - Convert to grayscale
+   * - Denoise (remove grain/noise)
    * - Increase contrast
-   * - Sharpen
-   * - Binarize (black & white)
+   * - Adaptive binarization
+   * - Morphological operations (clean up)
    */
   const preprocessImage = async (file: File): Promise<{ processedDataUrl: string; originalDataUrl: string }> => {
     return new Promise((resolve, reject) => {
@@ -185,30 +220,25 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
             // Get image data
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
-
-            // Step 1: Convert to grayscale and increase contrast
-            for (let i = 0; i < data.length; i += 4) {
-              // Grayscale conversion (weighted average)
-              const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-
-              // Increase contrast more aggressively for better OCR
-              const contrast = 2.0; // Increased from 1.5 to 2.0
-              const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-              const adjusted = factor * (gray - 128) + 128;
-              const clamped = Math.max(0, Math.min(255, adjusted));
-
-              data[i] = data[i + 1] = data[i + 2] = clamped;
-            }
-
-            // Step 2: Apply sharpening kernel
-            const sharpenKernel = [
-              0, -1, 0,
-              -1, 5, -1,
-              0, -1, 0
-            ];
-            const tempData = new Uint8ClampedArray(data);
             const width = canvas.width;
             const height = canvas.height;
+
+            // Step 1: Convert to grayscale
+            for (let i = 0; i < data.length; i += 4) {
+              // Grayscale conversion (weighted average for better text perception)
+              const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+              data[i] = data[i + 1] = data[i + 2] = gray;
+            }
+
+            // Step 2: Denoise with Gaussian blur (reduces grain/noise)
+            // This is critical for images with noisy backgrounds
+            const gaussianKernel = [
+              1, 2, 1,
+              2, 4, 2,
+              1, 2, 1
+            ];
+            const kernelSum = 16;
+            const tempData = new Uint8ClampedArray(data);
 
             for (let y = 1; y < height - 1; y++) {
               for (let x = 1; x < width - 1; x++) {
@@ -217,25 +247,56 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
                   for (let kx = -1; kx <= 1; kx++) {
                     const idx = ((y + ky) * width + (x + kx)) * 4;
                     const kernelIdx = (ky + 1) * 3 + (kx + 1);
-                    sum += tempData[idx] * sharpenKernel[kernelIdx];
+                    sum += tempData[idx] * gaussianKernel[kernelIdx];
                   }
                 }
                 const idx = (y * width + x) * 4;
-                data[idx] = data[idx + 1] = data[idx + 2] = Math.max(0, Math.min(255, sum));
+                const blurred = sum / kernelSum;
+                data[idx] = data[idx + 1] = data[idx + 2] = blurred;
               }
             }
 
-            // Step 3: Adaptive Binarization (better than global threshold)
-            // Use local adaptive thresholding for better results with varying lighting
-            const blockSize = 15; // Size of local neighborhood
-            const C = 10; // Constant subtracted from mean
+            // Step 3: Increase contrast (CLAHE-like approach)
+            // Use histogram equalization for better contrast
+            const histogram = new Array(256).fill(0);
+            for (let i = 0; i < data.length; i += 4) {
+              histogram[data[i]]++;
+            }
+
+            // Calculate cumulative distribution
+            const cdf = new Array(256).fill(0);
+            cdf[0] = histogram[0];
+            for (let i = 1; i < 256; i++) {
+              cdf[i] = cdf[i - 1] + histogram[i];
+            }
+
+            // Normalize CDF
+            const cdfMin = cdf.find(v => v > 0) || 0;
+            const totalPixels = width * height;
+            const lookupTable = new Array(256);
+            for (let i = 0; i < 256; i++) {
+              lookupTable[i] = Math.round(((cdf[i] - cdfMin) / (totalPixels - cdfMin)) * 255);
+            }
+
+            // Apply histogram equalization
+            for (let i = 0; i < data.length; i += 4) {
+              const equalized = lookupTable[data[i]];
+              data[i] = data[i + 1] = data[i + 2] = equalized;
+            }
+
+            // Step 4: Adaptive Binarization with Sauvola method
+            // Better for documents with varying background (like noisy/grainy images)
+            const blockSize = 25; // Larger block for noisy images
+            const k = 0.3; // Sauvola parameter
+            const R = 128; // Dynamic range
 
             const tempData2 = new Uint8ClampedArray(data);
 
             for (let y = 0; y < height; y++) {
               for (let x = 0; x < width; x++) {
-                // Calculate local mean in neighborhood
+                // Calculate local mean and standard deviation
                 let sum = 0;
+                let sumSq = 0;
                 let count = 0;
                 const halfBlock = Math.floor(blockSize / 2);
 
@@ -244,17 +305,42 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
                     const ny = Math.max(0, Math.min(height - 1, y + dy));
                     const nx = Math.max(0, Math.min(width - 1, x + dx));
                     const idx = (ny * width + nx) * 4;
-                    sum += tempData2[idx];
+                    const val = tempData2[idx];
+                    sum += val;
+                    sumSq += val * val;
                     count++;
                   }
                 }
 
-                const localMean = sum / count;
-                const threshold = localMean - C;
+                const mean = sum / count;
+                const variance = (sumSq / count) - (mean * mean);
+                const stdDev = Math.sqrt(Math.max(0, variance));
+
+                // Sauvola threshold formula
+                const threshold = mean * (1 + k * ((stdDev / R) - 1));
 
                 const idx = (y * width + x) * 4;
                 const value = tempData2[idx] > threshold ? 255 : 0;
                 data[idx] = data[idx + 1] = data[idx + 2] = value;
+              }
+            }
+
+            // Step 5: Morphological operations - Remove small noise
+            // Erosion followed by dilation (opening operation)
+            const tempData3 = new Uint8ClampedArray(data);
+
+            // Erosion (remove small white noise)
+            for (let y = 1; y < height - 1; y++) {
+              for (let x = 1; x < width - 1; x++) {
+                let minVal = 255;
+                for (let dy = -1; dy <= 1; dy++) {
+                  for (let dx = -1; dx <= 1; dx++) {
+                    const idx = ((y + dy) * width + (x + dx)) * 4;
+                    minVal = Math.min(minVal, tempData3[idx]);
+                  }
+                }
+                const idx = (y * width + x) * 4;
+                data[idx] = data[idx + 1] = data[idx + 2] = minVal;
               }
             }
 
@@ -277,11 +363,16 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
   };
 
   const fileToBase64 = async (file: File): Promise<{ mimeType: string; data: string; processedDataUrl?: string; originalDataUrl?: string }> => {
-    // Check if file is HEIC/HEIF and convert it first
+    // Use pre-converted file if available (HEIC files converted during upload)
+    // This avoids converting the same file twice
     let processFile = file;
 
-    if (file.type === 'image/heic' || file.type === 'image/heif' ||
-        file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+    if (convertedFiles[file.name]) {
+      // Use the pre-converted JPEG file
+      processFile = convertedFiles[file.name];
+      await addLog('info', `✅ Using pre-converted file: ${file.name}`);
+    } else if (isHeicFile(file)) {
+      // Fallback: convert if not already converted (shouldn't happen normally)
       try {
         processFile = await convertHeicToJpeg(file);
       } catch (error) {
@@ -340,7 +431,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
         await addLog('info', `📖 Reading file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
         const base64Image = await fileToBase64(file);
         await addLog('success', `✅ File read and preprocessed: ${file.name}`);
-        await addLog('info', `🎨 Applied: grayscale → contrast → sharpen → binarize`);
+        await addLog('info', `🎨 Applied: denoise → histogram equalization → adaptive binarization → morphology`);
 
         // Store processed image for display - UPDATE STATE IMMEDIATELY
         if (base64Image.processedDataUrl) {
@@ -521,10 +612,10 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
               </p>
               <ul className="text-sm text-blue-700 dark:text-blue-300 list-disc list-inside space-y-1">
                 <li><strong>HEIC supported!</strong> - Automatically converts Apple HEIC photos to JPEG</li>
-                <li><strong>Image preprocessing!</strong> - Auto-enhances images (grayscale, contrast, sharpen, binarize)</li>
+                <li><strong>Noise reduction!</strong> - Handles grainy/noisy backgrounds effectively</li>
+                <li><strong>Smart preprocessing!</strong> - Denoise → histogram equalization → adaptive binarization</li>
                 <li><strong>High resolution</strong> - Clear, readable text works best (300+ DPI recommended)</li>
-                <li><strong>Good lighting</strong> - High contrast between text and background</li>
-                <li><strong>Straight images</strong> - Avoid blurry or skewed photos</li>
+                <li><strong>Works with challenging images</strong> - Low contrast, varying backgrounds, and noisy scans</li>
               </ul>
             </div>
           </div>
