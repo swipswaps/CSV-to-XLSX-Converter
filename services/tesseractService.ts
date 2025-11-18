@@ -45,28 +45,31 @@ export class TesseractOCRService {
     // Start initialization
     this.initPromise = (async () => {
       try {
+        console.log('[TesseractService] Creating worker...');
         this.worker = await createWorker('eng', 1, {
           logger: (m) => {
-            // Optional: log progress
-            if (m.status === 'recognizing text') {
-              console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
-            }
+            // Log all initialization progress
+            console.log(`[TesseractService] ${m.status}: ${Math.round((m.progress || 0) * 100)}%`);
           }
         });
+        console.log('[TesseractService] Worker created successfully');
 
         // Configure Tesseract for better accuracy
         // PSM 3 = Fully automatic page segmentation (best for mixed content)
         // OEM 1 = Neural nets LSTM engine only (best accuracy)
+        console.log('[TesseractService] Setting parameters...');
         await this.worker.setParameters({
           tessedit_pageseg_mode: '3',  // Fully automatic page segmentation
           tessedit_ocr_engine_mode: '1', // LSTM neural net (best accuracy)
           tessedit_char_whitelist: '', // Allow all characters
           preserve_interword_spaces: '1', // Preserve spaces between words
         });
+        console.log('[TesseractService] Parameters set successfully');
 
         this.isInitialized = true;
+        console.log('[TesseractService] Initialization complete');
       } catch (error) {
-        console.error('Failed to initialize Tesseract:', error);
+        console.error('[TesseractService] Failed to initialize:', error);
         this.initPromise = null;
         throw new Error('Failed to initialize OCR engine');
       }

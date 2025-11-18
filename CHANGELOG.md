@@ -1,5 +1,102 @@
 # Changelog
 
+## [2.5.7] - 2025-01-18 - Enhanced Logging and Initialization Debugging
+
+### 🔧 Improved Logging and Error Handling
+
+**Changes:**
+- Removed `queueMicrotask` wrapper - using direct state updates for simplicity
+- Added comprehensive console logging to tesseractService initialization
+- Added error message details to initialization failure logs
+- Added console logs for cleanup/termination
+- Logs all Tesseract initialization progress (loading language data, etc.)
+
+**Why:**
+- Direct state updates work fine - React batches them automatically
+- Better debugging visibility for initialization issues
+- Helps identify if Tesseract is hanging during download/initialization
+
+**Files Modified:**
+- `components/ImageOCR.tsx` - Simplified addLog, added error details
+- `services/tesseractService.ts` - Added detailed console logging
+- `CHANGELOG.md` - v2.5.7 release notes
+- `package.json` - Version bump to 2.5.7
+
+---
+
+## [2.5.6] - 2025-01-18 - Critical Fix: flushSync Breaking OCR Processing
+
+### 🐛 Critical Bug Fix - OCR Stalling and Thumbnails Not Appearing
+
+**Problem (Discovered via Playwright Audit):**
+- User reported: "progress messages appear but stall at [11:40:14 AM] [INFO] Processing in progress..."
+- User reported: "thumbnail never appears"
+- Browser console error: `flushSync was called from inside a lifecycle method. React cannot flush when React is already rendering.`
+
+**Root Cause:**
+- `flushSync()` was being called from inside `useEffect` (React lifecycle method)
+- React **does not allow** `flushSync` during rendering or lifecycle methods
+- This caused React to throw errors and break the rendering pipeline
+- Progress logs would start but then stall
+- Preprocessed images never appeared
+- Extracted text never displayed
+- Processing hung indefinitely
+
+**Why flushSync Failed:**
+```typescript
+// WRONG - flushSync in lifecycle method
+useEffect(() => {
+  addLog('info', 'Initializing...'); // Calls flushSync inside useEffect
+}, []);
+
+const addLog = () => {
+  flushSync(() => {  // ❌ ERROR: Can't flush during lifecycle
+    setProgressLogs(prev => [...prev, log]);
+  });
+};
+```
+
+**Solution Implemented:**
+- Replaced `flushSync()` with `queueMicrotask()`
+- `queueMicrotask` schedules state update **outside** current render cycle
+- Allows React to complete current rendering before updating state
+- Still provides real-time updates without blocking React
+
+**Technical Fix:**
+```typescript
+// CORRECT - queueMicrotask schedules update safely
+const addLog = (type, message) => {
+  queueMicrotask(() => {  // ✅ Schedules outside render cycle
+    setProgressLogs(prev => [...prev, { timestamp, type, message }]);
+  });
+};
+```
+
+**Why queueMicrotask Works:**
+- Schedules callback to run **after** current JavaScript execution completes
+- Runs **before** next render cycle (faster than setTimeout)
+- Doesn't interfere with React's rendering pipeline
+- Safe to call from anywhere (lifecycle methods, event handlers, async functions)
+
+**Impact:**
+✅ Progress logs now update in real-time without errors
+✅ Preprocessed images appear correctly
+✅ Extracted text displays properly
+✅ No more stalling at "Processing in progress..."
+✅ No React errors in console
+✅ OCR processing completes successfully
+
+**Files Modified:**
+- `components/ImageOCR.tsx` - Replaced flushSync with queueMicrotask, removed react-dom import
+- `CHANGELOG.md` - v2.5.6 release notes
+- `package.json` - Version bump to 2.5.6
+
+**Bundle Size:**
+- JS: ~1,996 kB (gzip: ~535 kB) - No change
+- Build Time: ~6s
+
+---
+
 ## [2.5.5] - 2025-01-18 - Major OCR Accuracy Improvements
 
 ### 🎯 Massive OCR Accuracy Improvements

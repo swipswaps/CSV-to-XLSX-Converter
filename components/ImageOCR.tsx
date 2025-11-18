@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { flushSync } from 'react-dom';
 import toast from 'react-hot-toast';
 import heic2any from 'heic2any';
 import { UploadIcon } from './Icons';
@@ -28,33 +27,37 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
     const timestamp = new Date().toLocaleTimeString();
     console.log(`[${timestamp}] [${type.toUpperCase()}] ${message}`);
 
-    // Use flushSync to force immediate synchronous DOM update
-    // This ensures the UI updates in real-time during async operations
-    flushSync(() => {
-      setProgressLogs(prev => [...prev, { timestamp, type, message }]);
-    });
+    // Direct state update - React will batch and update efficiently
+    setProgressLogs(prev => [...prev, { timestamp, type, message }]);
   }, []);
 
   useEffect(() => {
     const init = async () => {
       setIsInitializing(true);
       addLog('info', 'Initializing OCR engine...');
+
       try {
+        console.log('Starting Tesseract initialization...');
         await tesseractService.initialize();
+        console.log('Tesseract initialized successfully');
+
         setIsReady(true);
         addLog('success', 'OCR engine ready! No API key needed - works offline!');
         toast.success('✅ OCR engine ready! No API key needed - works offline!', { duration: 3000 });
       } catch (error) {
-        addLog('error', 'Failed to initialize OCR engine. Please refresh the page.');
+        console.error('Tesseract initialization error:', error);
+        addLog('error', `Failed to initialize OCR engine: ${error instanceof Error ? error.message : 'Unknown error'}`);
         toast.error('Failed to initialize OCR engine. Please refresh the page.');
       } finally {
         setIsInitializing(false);
       }
     };
+
     init();
 
     // Cleanup on unmount
     return () => {
+      console.log('Cleaning up Tesseract worker...');
       tesseractService.terminate();
     };
   }, [addLog]);
