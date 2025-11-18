@@ -1,41 +1,40 @@
 # Changelog
 
-## [2.5.0] - 2025-11-17 - AI-Powered OCR + Row Management Fixes
+## [2.5.0] - 2025-11-17 - Offline OCR + Row Management Fixes
 
 ### 🎯 Major Features
 
-#### AI-Powered OCR Image Import (Production-Ready!)
-- **Added:** Complete Google Gemini AI integration for OCR extraction
+#### Offline OCR Image Import (Production-Ready!)
+- **Added:** Complete Tesseract.js integration for offline OCR extraction
 - **Added:** New "📸 OCR Import" tab for extracting data from images
-- **Added:** GeminiOCRService class - Abstracts all API complexity
-- **Added:** OCRSettings component - User-friendly API key configuration
+- **Added:** TesseractOCRService class - Handles all OCR processing
 - **Added:** Drag-and-drop image upload interface with preview grid
 - **Added:** Multi-file batch processing with progress tracking
 - **Added:** File status indicators (pending/processing/success/error)
-- **Added:** Support for PNG, JPG, HEIC, and other image formats
+- **Added:** Support for PNG, JPG, and other image formats
 - **Added:** UploadIcon component for file upload UI
 - **Added:** ImageOCR component with full drag-and-drop functionality
 - **Integration:** OCR extracted data populates template data automatically
 - **UX:** Toast notifications with detailed processing status
-- **Privacy:** API key stored in localStorage (never sent to servers)
-- **Free Tier:** Generous free usage with Google Gemini API
+- **Privacy:** 100% browser-based - no data sent to servers
+- **Free:** No API keys, no costs, no usage limits
+- **Offline:** Works without internet connection after initial load
 
-#### Smart OCR Recognition
-- **Tables:** Extracts headers and rows from spreadsheet images
-- **Receipts:** Extracts merchant, total, date, and line items
-- **Lists:** Extracts repeating items with consistent structure
-- **Notes:** Extracts title, date, and content from handwritten/typed notes
-- **Documents:** General OCR for any text-based document
-- **Auto-Detection:** AI automatically identifies document type
+#### Smart Text Recognition
+- **Tables:** Automatically detects columns and rows with delimiters (tabs, pipes, commas)
+- **Lists:** Extracts numbered or bulleted items with line numbers
+- **Forms:** Recognizes key-value pairs (Name: John, Date: 2024)
+- **Documents:** General text extraction from any image
+- **Auto-Detection:** Automatically identifies document structure
 - **Structured Output:** Converts images to editable spreadsheet data
 
-#### API Key Management
-- **One-Click Setup:** Simple configuration interface in OCR tab
-- **Multiple Sources:** Supports localStorage, environment variables, or direct input
-- **Security:** API key masked in UI (shows first 8 and last 4 chars)
-- **Validation:** Real-time configuration status indicator
-- **Error Handling:** User-friendly error messages for API issues
-- **Instructions:** Step-by-step guide to get free API key
+#### OCR Engine Features
+- **No Setup Required:** Works out of the box - no API keys needed
+- **Automatic Initialization:** OCR engine initializes on component mount
+- **Progress Tracking:** Real-time progress updates during recognition
+- **Error Handling:** User-friendly error messages for initialization/recognition failures
+- **Resource Management:** Automatic cleanup on component unmount
+- **100+ Languages:** Supports multiple languages (currently configured for English)
 
 ### 🐛 Critical Bug Fixes
 
@@ -81,28 +80,38 @@
 - **Cleanup:** Removed all debug console.log statements
 - **Cleanup:** Removed test files (test-simple-duplicate.mjs, test-dropdown.mjs, test-ux.mjs, test-manual.mjs, test-option-c.mjs)
 
+### 🔧 Image Format Handling
+
+- **HEIC Conversion:** Automatic conversion to PNG for HEIC/HEIF images
+- **Canvas API:** Uses HTML5 canvas for image format conversion
+- **Fallback Errors:** Clear error messages when conversion fails
+- **Format Support:** Best results with JPG and PNG formats
+- **User Guidance:** Tips displayed for optimal OCR results
+
 ### 📦 Bundle Size & Dependencies
 
-- **Size:** 650.27 kB (increased from 607.37 kB due to OCR + Gemini AI)
-- **Gzip:** 191.23 kB
-- **Build Time:** 4.89s
+- **Size:** 636.58 kB (increased from 607.37 kB due to Tesseract.js OCR)
+- **Gzip:** 190.83 kB
+- **Build Time:** 5.21s
 - **Status:** ✅ PASSING
-- **New Dependency:** `@google/generative-ai` (Google Gemini AI SDK)
+- **New Dependency:** `tesseract.js` (Pure JavaScript OCR library)
+- **Removed Dependency:** `@google/generative-ai` (replaced with offline solution)
 
 ### 🧪 Testing
 
 - **Automated:** Playwright tests confirmed row duplication works correctly
 - **Manual:** Dropdown menu tested and functional
 - **Manual:** OCR tab renders correctly with drag-and-drop interface
-- **Manual:** API key configuration tested with localStorage persistence
-- **Manual:** Gemini AI integration tested with sample images
+- **Manual:** OCR engine initialization tested successfully
+- **Manual:** Text extraction tested with sample images
+- **Manual:** Structured data parsing tested (tables, lists, forms)
 
 ### 🎓 Credits
 
 - **OCR Inspiration:** [OCR-Data-Exporter](https://github.com/swipswaps/OCR-Data-Exporter) by swipswaps
 - **Drag-and-drop UI:** Adapted from OCR-Data-Exporter FileUpload component
 - **Image preview grid:** Based on OCR-Data-Exporter design patterns
-- **Gemini AI prompt:** Enhanced version of OCR-Data-Exporter's extraction prompt
+- **OCR Engine:** [Tesseract.js](https://tesseract.projectnaptha.com/) - Pure JavaScript OCR
 
 ---
 

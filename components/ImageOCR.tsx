@@ -1,8 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { UploadIcon } from './Icons';
-import { OCRSettings } from './OCRSettings';
-import { geminiService } from '../services/geminiService';
+import { tesseractService } from '../services/tesseractService';
 
 interface ImageOCRProps {
   onDataExtracted: (data: any[][]) => void;
@@ -14,7 +13,30 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
   const [processing, setProcessing] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [fileStatuses, setFileStatuses] = useState<Record<string, 'pending' | 'processing' | 'success' | 'error'>>({});
-  const [isApiConfigured, setIsApiConfigured] = useState(geminiService.isConfigured());
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+
+  // Initialize Tesseract on component mount
+  useEffect(() => {
+    const init = async () => {
+      setIsInitializing(true);
+      try {
+        await tesseractService.initialize();
+        setIsReady(true);
+        toast.success('✅ OCR engine ready! No API key needed - works offline!', { duration: 3000 });
+      } catch (error) {
+        toast.error('Failed to initialize OCR engine. Please refresh the page.');
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+    init();
+
+    // Cleanup on unmount
+    return () => {
+      tesseractService.terminate();
+    };
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -83,7 +105,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
   };
 
   const extractDataFromImage = async (image: { mimeType: string; data: string }): Promise<any[]> => {
-    const result = await geminiService.extractDataFromImage(image);
+    const result = await tesseractService.extractDataFromImage(image);
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to extract data');
@@ -98,8 +120,8 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
       return;
     }
 
-    if (!isApiConfigured) {
-      toast.error('Please configure your Gemini API key first');
+    if (!isReady) {
+      toast.error('OCR engine is still initializing. Please wait...');
       return;
     }
 
@@ -151,14 +173,20 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
 
   return (
     <div className="space-y-6">
-      <OCRSettings onApiKeyChange={setIsApiConfigured} />
+      {isInitializing && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            ⏳ <strong>Initializing OCR engine...</strong> This may take a few seconds on first load.
+          </p>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
           📸 Upload Images for OCR Extraction
         </h3>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-          Upload images of receipts, tables, lists, or printed documents. Google Gemini AI will extract structured data automatically.
+          Upload images of receipts, tables, lists, or printed documents. <strong>Tesseract.js</strong> will extract text automatically - works completely offline, no API key needed!
         </p>
 
         <label
@@ -223,26 +251,41 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
             </div>
             <button
               onClick={handleProcess}
-              disabled={processing || !isApiConfigured}
+              disabled={processing || !isReady}
               className="mt-8 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             >
-              {processing ? '⏳ Processing...' : !isApiConfigured ? '🔒 Configure API Key First' : `🚀 Extract Data from ${files.length} File(s)`}
+              {processing ? '⏳ Processing...' : !isReady ? '⏳ Initializing OCR...' : `🚀 Extract Data from ${files.length} File(s)`}
             </button>
           </div>
         )}
 
-        {isApiConfigured && (
-          <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <p className="text-sm text-green-800 dark:text-green-200">
-              <strong>✅ Ready to extract data!</strong> Supported formats:
-            </p>
-            <ul className="mt-2 text-sm text-green-700 dark:text-green-300 list-disc list-inside space-y-1">
-              <li><strong>Tables:</strong> Spreadsheets, data grids with headers and rows</li>
-              <li><strong>Receipts:</strong> Purchase receipts with merchant, total, date, items</li>
-              <li><strong>Lists:</strong> Inventory lists, product catalogs, structured text</li>
-              <li><strong>Notes:</strong> Handwritten or typed notes with title and content</li>
-              <li><strong>Documents:</strong> Any text-based document for general OCR</li>
-            </ul>
+        {isReady && (
+          <div className="mt-6 space-y-4">
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-sm text-green-800 dark:text-green-200">
+                <strong>✅ OCR Ready!</strong> Works completely offline - no API key needed!
+              </p>
+              <ul className="mt-2 text-sm text-green-700 dark:text-green-300 list-disc list-inside space-y-1">
+                <li><strong>Tables:</strong> Automatically detects columns and rows</li>
+                <li><strong>Lists:</strong> Extracts numbered or bulleted items</li>
+                <li><strong>Forms:</strong> Recognizes key-value pairs (Name: John, Date: 2024)</li>
+                <li><strong>Documents:</strong> General text extraction from any image</li>
+                <li><strong>100% Free:</strong> No API costs, works offline in your browser</li>
+              </ul>
+            </div>
+
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-800 dark:text-blue-200 font-semibold mb-2">
+                💡 Tips for Best Results:
+              </p>
+              <ul className="text-sm text-blue-700 dark:text-blue-300 list-disc list-inside space-y-1">
+                <li><strong>Use JPG or PNG</strong> - HEIC format may have limited support</li>
+                <li><strong>High resolution</strong> - Clear, readable text works best</li>
+                <li><strong>Good lighting</strong> - High contrast between text and background</li>
+                <li><strong>Straight images</strong> - Avoid blurry or skewed photos</li>
+                <li><strong>Clean backgrounds</strong> - Minimal noise or watermarks</li>
+              </ul>
+            </div>
           </div>
         )}
       </div>

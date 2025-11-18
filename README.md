@@ -6,19 +6,19 @@ A high-performance, browser-based data editor with **AI-powered OCR**, template 
 
 ## ✨ Features
 
-### 🆕 AI-Powered OCR (NEW!)
-- 📸 **Image to Data**: Extract structured data from images using Google Gemini AI
+### 🆕 Offline OCR (NEW!)
+- 📸 **Image to Data**: Extract text from images using Tesseract.js OCR
 - 🖼️ **Multi-File Processing**: Upload and process multiple images at once
-- 📋 **Smart Recognition**: Automatically detects tables, receipts, lists, notes, and documents
+- 📋 **Smart Recognition**: Automatically detects tables, lists, forms, and documents
 - 🎯 **Structured Output**: Converts images to editable spreadsheet data
-- 🔒 **Privacy First**: API key stored locally in your browser
-- 🆓 **Free Tier Available**: Generous free usage with Google Gemini API
+- 🔒 **100% Privacy**: Everything runs in your browser - no data sent to servers
+- 🆓 **Completely Free**: No API keys, no costs, no limits
+- 🌐 **Works Offline**: No internet connection required after initial load
 - **Supported Formats:**
-  - **Tables**: Spreadsheets, data grids with headers and rows
-  - **Receipts**: Purchase receipts with merchant, total, date, items
-  - **Lists**: Inventory lists, product catalogs, structured text
-  - **Notes**: Handwritten or typed notes with title and content
-  - **Documents**: Any text-based document for general OCR
+  - **Tables**: Automatically detects columns and rows with delimiters
+  - **Lists**: Extracts numbered or bulleted items
+  - **Forms**: Recognizes key-value pairs (Name: John, Date: 2024)
+  - **Documents**: General text extraction from any image
 
 ### Core Functionality
 - 📊 **Template-Based Mapping**: Upload an XLSX template to define output structure
@@ -87,28 +87,34 @@ A high-performance, browser-based data editor with **AI-powered OCR**, template 
 4. **Open your browser**
    Navigate to `http://localhost:3000`
 
-### 🔑 OCR Setup (Optional)
+### 📸 OCR Feature (No Setup Required!)
 
-To enable AI-powered image data extraction:
+The OCR feature works completely offline using **Tesseract.js**:
 
-1. **Get a free Gemini API key**
-   - Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
-   - Sign in with your Google account
-   - Click "Create API Key" or "Get API Key"
-   - Copy the generated key
+1. **Navigate to OCR Tab**
+   - Click the "📸 OCR Import" tab
+   - Wait a few seconds for the OCR engine to initialize (first time only)
 
-2. **Configure in the app**
-   - Open the app and navigate to the "📸 OCR Import" tab
-   - Click "Setup" in the OCR Configuration section
-   - Paste your API key and click "Save"
-   - Your key is stored locally in your browser (never sent to our servers)
+2. **Upload Images**
+   - Drag and drop images or click to browse
+   - Supports PNG, JPG, and other image formats
+   - Upload multiple images for batch processing
 
-3. **Start extracting data**
-   - Upload images of receipts, tables, or documents
-   - Click "Extract Data" and watch the AI work!
+3. **Extract Data**
+   - Click "🚀 Extract Data from X File(s)"
+   - OCR processes each image and extracts text
+   - Text is automatically parsed into structured data
+
+4. **Review & Edit**
    - Extracted data appears in the spreadsheet editor
+   - Edit, add rows, or delete rows as needed
+   - Export as XLSX, CSV, JSON, or SQL
 
-**Note:** The Gemini API offers a generous free tier. Your API key is stored in `localStorage` and never leaves your browser.
+**Benefits:**
+- ✅ **No API Key Required** - Works out of the box
+- ✅ **100% Free** - No costs or usage limits
+- ✅ **Complete Privacy** - All processing happens in your browser
+- ✅ **Works Offline** - No internet needed after initial page load
 
 ## 📖 User Guide
 
@@ -124,43 +130,43 @@ The app **automatically loads** with a default marketplace template when you ope
 
 ### Workflow 1: Extract Data from Images with OCR (NEW!)
 
-**Use Case:** You have images of receipts, tables, or documents and want to extract structured data
+**Use Case:** You have images of receipts, tables, or documents and want to extract text data
 
 1. **Navigate to OCR Tab**
    - Click the **"📸 OCR Import"** tab
-   - First time: Click "Setup" to configure your Gemini API key
+   - Wait a few seconds for OCR engine to initialize (first time only)
 
-2. **Configure API Key (One-Time Setup)**
-   - Get a free API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
-   - Paste it in the configuration section
-   - Click "Save" - your key is stored locally in your browser
-
-3. **Upload Images**
+2. **Upload Images**
    - Drag and drop images or click to browse
-   - Supports PNG, JPG, HEIC, and other image formats
+   - Supports PNG, JPG, and other image formats
    - Upload multiple images at once for batch processing
 
-4. **Extract Data**
+3. **Extract Data**
    - Click **"🚀 Extract Data from X File(s)"**
-   - AI processes each image and extracts structured data
+   - Tesseract.js processes each image and extracts text
    - Progress indicators show processing status
    - Success/error icons appear for each file
 
-5. **Review & Edit**
+4. **Review & Edit**
    - Extracted data automatically populates the XLSX editor
    - Switch to other tabs to see data in different formats
    - Edit, add rows, or delete rows as needed
 
-6. **Export**
+5. **Export**
    - Download as XLSX, CSV, JSON, or SQL
    - Or preview as Facebook posts
 
 **Supported Image Types:**
-- **Tables**: Spreadsheets, data grids with headers and rows
-- **Receipts**: Purchase receipts with merchant, total, date, items
-- **Lists**: Inventory lists, product catalogs, structured text
-- **Notes**: Handwritten or typed notes with title and content
-- **Documents**: Any text-based document for general OCR
+- **Tables**: Automatically detects columns and rows with delimiters (tabs, pipes, commas)
+- **Lists**: Extracts numbered or bulleted items
+- **Forms**: Recognizes key-value pairs (Name: John, Date: 2024)
+- **Documents**: General text extraction from any image
+
+**Tips for Best Results:**
+- Use high-resolution images with clear, readable text
+- Ensure good lighting and contrast
+- Avoid blurry or skewed images
+- For tables, use images with clear column separators
 
 ### Workflow 2: Edit & Export Template in Multiple Formats
 
