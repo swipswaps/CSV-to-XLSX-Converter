@@ -169,45 +169,6 @@ export class TesseractOCRService {
   }
 
   /**
-   * Convert HEIC or other unsupported formats to PNG using canvas
-   */
-  private async convertImageToPNG(imageData: ImageData): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        try {
-          // Create canvas and draw image
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-
-          if (!ctx) {
-            reject(new Error('Failed to get canvas context'));
-            return;
-          }
-
-          ctx.drawImage(img, 0, 0);
-
-          // Convert to PNG base64
-          const pngDataUrl = canvas.toDataURL('image/png');
-          const base64Data = pngDataUrl.split(',')[1];
-          resolve(base64Data);
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      img.onerror = () => {
-        reject(new Error('Failed to load image for conversion'));
-      };
-
-      // Set image source
-      img.src = `data:${imageData.mimeType};base64,${imageData.data}`;
-    });
-  }
-
-  /**
    * Extract structured data from an image using Tesseract OCR
    */
   async extractDataFromImage(image: ImageData): Promise<OCRResult> {
@@ -222,26 +183,8 @@ export class TesseractOCRService {
         };
       }
 
-      let imageUrl: string;
-      let processedData: string;
-
-      // Handle HEIC and other formats by converting to PNG
-      if (image.mimeType.includes('heic') || image.mimeType.includes('heif')) {
-        try {
-          console.log('Converting HEIC to PNG for OCR processing...');
-          processedData = await this.convertImageToPNG(image);
-          imageUrl = `data:image/png;base64,${processedData}`;
-        } catch (conversionError) {
-          console.error('HEIC conversion failed:', conversionError);
-          return {
-            success: false,
-            error: 'HEIC format not fully supported. Please convert to JPG or PNG first.'
-          };
-        }
-      } else {
-        // Use original image data
-        imageUrl = `data:${image.mimeType};base64,${image.data}`;
-      }
+      // Use image data directly (HEIC conversion handled before this)
+      const imageUrl = `data:${image.mimeType};base64,${image.data}`;
 
       // Perform OCR
       console.log('Starting OCR recognition...');
@@ -280,8 +223,6 @@ export class TesseractOCRService {
         errorMessage = 'Failed to initialize OCR engine. Please try again.';
       } else if (error.message?.includes('recognize')) {
         errorMessage = 'Failed to recognize text. Try a clearer, higher-contrast image.';
-      } else if (error.message?.includes('HEIC') || error.message?.includes('heif')) {
-        errorMessage = 'HEIC format requires conversion. Please use JPG or PNG instead.';
       }
 
       return {

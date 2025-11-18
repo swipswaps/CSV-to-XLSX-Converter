@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import heic2any from 'heic2any';
 import { UploadIcon } from './Icons';
 import { tesseractService } from '../services/tesseractService';
 
@@ -91,16 +92,60 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
     }
   }, [handleDragEvent, processing]);
 
-  const fileToBase64 = (file: File): Promise<{ mimeType: string; data: string }> => {
+  /**
+   * Convert HEIC/HEIF files to JPEG using heic2any library
+   */
+  const convertHeicToJpeg = async (file: File): Promise<File> => {
+    try {
+      console.log(`Converting HEIC file: ${file.name}`);
+
+      // Convert HEIC to JPEG blob
+      const convertedBlob = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.9
+      });
+
+      // heic2any can return Blob or Blob[], handle both cases
+      const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+
+      // Create a new File object from the blob
+      const convertedFile = new File(
+        [blob],
+        file.name.replace(/\.heic$/i, '.jpg'),
+        { type: 'image/jpeg' }
+      );
+
+      console.log(`✅ HEIC conversion successful: ${file.name} -> ${convertedFile.name}`);
+      return convertedFile;
+    } catch (error) {
+      console.error('HEIC conversion failed:', error);
+      throw new Error(`Failed to convert HEIC file: ${file.name}`);
+    }
+  };
+
+  const fileToBase64 = async (file: File): Promise<{ mimeType: string; data: string }> => {
+    // Check if file is HEIC/HEIF and convert it first
+    let processFile = file;
+
+    if (file.type === 'image/heic' || file.type === 'image/heif' ||
+        file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+      try {
+        processFile = await convertHeicToJpeg(file);
+      } catch (error) {
+        throw new Error(`HEIC conversion failed for ${file.name}. Please convert to JPG manually.`);
+      }
+    }
+
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
         const base64Data = result.split(',')[1];
-        resolve({ mimeType: file.type, data: base64Data });
+        resolve({ mimeType: processFile.type, data: base64Data });
       };
       reader.onerror = reject;
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(processFile);
     });
   };
 
@@ -279,7 +324,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
                 💡 Tips for Best Results:
               </p>
               <ul className="text-sm text-blue-700 dark:text-blue-300 list-disc list-inside space-y-1">
-                <li><strong>Use JPG or PNG</strong> - HEIC format may have limited support</li>
+                <li><strong>HEIC supported!</strong> - Automatically converts Apple HEIC photos to JPEG</li>
                 <li><strong>High resolution</strong> - Clear, readable text works best</li>
                 <li><strong>Good lighting</strong> - High contrast between text and background</li>
                 <li><strong>Straight images</strong> - Avoid blurry or skewed photos</li>

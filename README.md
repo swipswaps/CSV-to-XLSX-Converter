@@ -97,7 +97,8 @@ The OCR feature works completely offline using **Tesseract.js**:
 
 2. **Upload Images**
    - Drag and drop images or click to browse
-   - Supports PNG, JPG, and other image formats
+   - Supports PNG, JPG, JPEG, and **HEIC/HEIF** (Apple photos)
+   - HEIC files are automatically converted to JPEG
    - Upload multiple images for batch processing
 
 3. **Extract Data**

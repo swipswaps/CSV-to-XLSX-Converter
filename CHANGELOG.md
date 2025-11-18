@@ -82,19 +82,23 @@
 
 ### 🔧 Image Format Handling
 
-- **HEIC Conversion:** Automatic conversion to PNG for HEIC/HEIF images
-- **Canvas API:** Uses HTML5 canvas for image format conversion
+- **HEIC Conversion:** Automatic conversion to JPEG using heic2any library
+- **Apple Photos Support:** Full support for HEIC/HEIF files from iPhones/iPads
+- **Conversion Progress:** Toast notifications show conversion status
+- **Quality Preservation:** 90% JPEG quality for converted images
 - **Fallback Errors:** Clear error messages when conversion fails
-- **Format Support:** Best results with JPG and PNG formats
+- **Format Support:** PNG, JPG, JPEG, HEIC, HEIF all supported
 - **User Guidance:** Tips displayed for optimal OCR results
 
 ### 📦 Bundle Size & Dependencies
 
-- **Size:** 636.58 kB (increased from 607.37 kB due to Tesseract.js OCR)
-- **Gzip:** 190.83 kB
-- **Build Time:** 5.21s
+- **Size:** ~640 kB (increased from 607.37 kB due to Tesseract.js + heic2any)
+- **Gzip:** ~192 kB
+- **Build Time:** ~5-6s
 - **Status:** ✅ PASSING
-- **New Dependency:** `tesseract.js` (Pure JavaScript OCR library)
+- **New Dependencies:**
+  - `tesseract.js` (Pure JavaScript OCR library)
+  - `heic2any` (HEIC to JPEG conversion library)
 - **Removed Dependency:** `@google/generative-ai` (replaced with offline solution)
 
 ### 🧪 Testing
