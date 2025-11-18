@@ -27,19 +27,23 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
     const timestamp = new Date().toLocaleTimeString();
     setProgressLogs(prev => [...prev, { timestamp, type, message }]);
     console.log(`[${timestamp}] [${type.toUpperCase()}] ${message}`);
+
+    // Force React to flush state updates immediately for real-time progress
+    // This ensures the UI updates during async operations
+    return new Promise(resolve => setTimeout(resolve, 0));
   }, []);
 
   useEffect(() => {
     const init = async () => {
       setIsInitializing(true);
-      addLog('info', 'Initializing OCR engine...');
+      await addLog('info', 'Initializing OCR engine...');
       try {
         await tesseractService.initialize();
         setIsReady(true);
-        addLog('success', 'OCR engine ready! No API key needed - works offline!');
+        await addLog('success', 'OCR engine ready! No API key needed - works offline!');
         toast.success('✅ OCR engine ready! No API key needed - works offline!', { duration: 3000 });
       } catch (error) {
-        addLog('error', 'Failed to initialize OCR engine. Please refresh the page.');
+        await addLog('error', 'Failed to initialize OCR engine. Please refresh the page.');
         toast.error('Failed to initialize OCR engine. Please refresh the page.');
       } finally {
         setIsInitializing(false);
@@ -111,7 +115,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
    */
   const convertHeicToJpeg = async (file: File): Promise<File> => {
     try {
-      addLog('info', `🔄 Converting HEIC file: ${file.name}`);
+      await addLog('info', `🔄 Converting HEIC file: ${file.name}`);
       console.log(`Converting HEIC file: ${file.name}`);
 
       // Convert HEIC to JPEG blob
@@ -131,11 +135,11 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
         { type: 'image/jpeg' }
       );
 
-      addLog('success', `✅ HEIC conversion successful: ${file.name} → ${convertedFile.name}`);
+      await addLog('success', `✅ HEIC conversion successful: ${file.name} → ${convertedFile.name}`);
       console.log(`✅ HEIC conversion successful: ${file.name} -> ${convertedFile.name}`);
       return convertedFile;
     } catch (error) {
-      addLog('error', `❌ HEIC conversion failed: ${file.name}`);
+      await addLog('error', `❌ HEIC conversion failed: ${file.name}`);
       console.error('HEIC conversion failed:', error);
       throw new Error(`Failed to convert HEIC file: ${file.name}`);
     }
@@ -297,7 +301,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
     setProcessedImages({});
 
     setProcessing(true);
-    addLog('info', `🚀 Starting OCR processing for ${files.length} file(s)...`);
+    await addLog('info', `🚀 Starting OCR processing for ${files.length} file(s)...`);
 
     const allData: any[][] = [];
     const allText: string[] = [];
@@ -309,14 +313,14 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
       const file = files[i];
       try {
         setFileStatuses(prev => ({ ...prev, [file.name]: 'processing' }));
-        addLog('info', `📄 [${i + 1}/${files.length}] Processing: ${file.name}`);
+        await addLog('info', `📄 [${i + 1}/${files.length}] Processing: ${file.name}`);
         toast.loading(`Processing ${file.name}...`, { id: file.name });
 
         // Step 1: File reading and preprocessing
-        addLog('info', `📖 Reading file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+        await addLog('info', `📖 Reading file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
         const base64Image = await fileToBase64(file);
-        addLog('success', `✅ File read and preprocessed: ${file.name}`);
-        addLog('info', `🎨 Applied: grayscale → contrast → sharpen → binarize`);
+        await addLog('success', `✅ File read and preprocessed: ${file.name}`);
+        await addLog('info', `🎨 Applied: grayscale → contrast → sharpen → binarize`);
 
         // Store processed image for display
         if (base64Image.processedDataUrl) {
@@ -324,7 +328,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
         }
 
         // Step 2: OCR extraction
-        addLog('info', `🔍 Running OCR on: ${file.name}`);
+        await addLog('info', `🔍 Running OCR on: ${file.name}`);
         const result = await tesseractService.extractDataFromImage(base64Image);
 
         if (!result.success) {
@@ -334,7 +338,7 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
         const data = result.data || [];
         const rawText = result.rawText || '';
 
-        addLog('success', `✅ OCR complete: ${file.name} - Extracted ${rawText.length} characters`);
+        await addLog('success', `✅ OCR complete: ${file.name} - Extracted ${rawText.length} characters`);
 
         if (rawText) {
           allText.push(`\n========== ${file.name} ==========\n${rawText}\n`);
@@ -347,18 +351,18 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
           allData.push([headers, ...rows]);
 
           setFileStatuses(prev => ({ ...prev, [file.name]: 'success' }));
-          addLog('success', `✅ Extracted ${data.length} rows from ${file.name}`);
+          await addLog('success', `✅ Extracted ${data.length} rows from ${file.name}`);
           toast.success(`✅ Extracted ${data.length} rows from ${file.name}`, { id: file.name });
           successCount++;
         } else {
           setFileStatuses(prev => ({ ...prev, [file.name]: 'success' }));
-          addLog('warning', `⚠️ No structured data found in ${file.name} (text extracted but not parseable)`);
+          await addLog('warning', `⚠️ No structured data found in ${file.name} (text extracted but not parseable)`);
           toast('⚠️ No data found in ' + file.name, { id: file.name, icon: '⚠️' });
         }
       } catch (err: any) {
         setFileStatuses(prev => ({ ...prev, [file.name]: 'error' }));
         const errorMsg = err.message || 'Unknown error';
-        addLog('error', `❌ ${file.name}: ${errorMsg}`);
+        await addLog('error', `❌ ${file.name}: ${errorMsg}`);
         toast.error(`❌ ${file.name}: ${errorMsg}`, { id: file.name, duration: 5000 });
         errorCount++;
       }
@@ -371,17 +375,17 @@ export const ImageOCR: React.FC<ImageOCRProps> = ({ onDataExtracted }) => {
       setExtractedText(allText.join('\n'));
       setShowResults(true);
       setProcessedImages(processedImgs);
-      addLog('success', `📝 All extracted text saved to Results tab`);
+      await addLog('success', `📝 All extracted text saved to Results tab`);
     }
 
     if (allData.length > 0) {
       // Merge all data - combine all rows with same headers
       const mergedData = allData.flat();
       onDataExtracted(mergedData);
-      addLog('success', `🎉 OCR complete! ${successCount} file(s) processed successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
+      await addLog('success', `🎉 OCR complete! ${successCount} file(s) processed successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`);
       toast.success(`🎉 OCR complete! ${successCount} file(s) processed successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`, { duration: 4000 });
     } else if (errorCount > 0) {
-      addLog('error', `❌ Failed to extract data from ${errorCount} file(s)`);
+      await addLog('error', `❌ Failed to extract data from ${errorCount} file(s)`);
       toast.error(`Failed to extract data from ${errorCount} file(s)`, { duration: 4000 });
     }
   };

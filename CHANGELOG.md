@@ -1,5 +1,43 @@
 # Changelog
 
+## [2.5.4] - 2025-01-18 - Critical Fix: Real-Time Progress Logging During OCR
+
+### 🐛 Critical Bug Fix - Progress Logging Not Displaying
+
+**Problem:**
+- User reported: "app stalls again at Processing IMG_0371.heic... without displaying progress"
+- Progress logs were being added to state but UI wasn't updating during async operations
+- React batches state updates, so logs only appeared after entire OCR process completed
+- Users saw no feedback during long-running OCR operations
+
+**Root Cause:**
+- React state updates are batched and don't trigger re-renders during async operations
+- The `addLog()` function was synchronous, so state updates queued but didn't flush
+- UI only updated when the entire `handleProcess()` async function completed
+- This made the app appear frozen during OCR processing
+
+**Solution Implemented:**
+- Changed `addLog()` to return a Promise that resolves after state update
+- Added `setTimeout(resolve, 0)` to force React to flush state updates to DOM
+- Updated all `addLog()` calls to use `await` for proper async flow
+- This ensures UI updates immediately after each log entry is added
+
+**Impact:**
+- ✅ Real-time progress updates now visible during OCR processing
+- ✅ Users see each step: file reading, preprocessing, OCR extraction
+- ✅ No more "app appears frozen" during long operations
+- ✅ Better user experience with live feedback
+- ✅ Zero performance impact (setTimeout 0ms is negligible)
+
+**Files Modified:**
+- `components/ImageOCR.tsx` - Updated `addLog()` and all call sites (26 locations)
+
+**Bundle Size:**
+- JS: 1,996.43 kB (gzip: 534.75 kB) - No change
+- Build Time: 5.48s
+
+---
+
 ## [2.5.3] - 2025-01-18 - OCR Accuracy Improvements: Image Preprocessing + UX Enhancements
 
 ### 🎯 Major OCR Improvements
